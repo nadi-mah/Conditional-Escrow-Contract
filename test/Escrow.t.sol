@@ -54,4 +54,22 @@ contract EscrowTest is Test {
             block.timestamp + 1 days
         );
     }
+    function test_RevertWhen_PayeeAddressIsInvalid() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidPayeeAddress.selector,
+                address(0),
+                "The payee address in Invalid"
+            )
+        );
+
+        payee = address(0);
+        vm.deal(payer, 1 ether);
+        vm.prank(payer);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+    }
 }
