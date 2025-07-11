@@ -72,4 +72,52 @@ contract EscrowTest is Test {
             block.timestamp + 1 days
         );
     }
+    function test_createAgreement_handleNextAgreementId() public {
+        address payer1 = makeAddr("payer1");
+        address payer2 = makeAddr("payer2");
+
+        vm.deal(payer1, 1 ether);
+        vm.deal(payer2, 1 ether);
+
+        vm.prank(payer1);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+        vm.stopPrank();
+        assertEq(escrow.nextAgreementId(), uint(1));
+        vm.prank(payer2);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+        vm.stopPrank();
+        assertEq(escrow.nextAgreementId(), uint(2));
+    }
+    // function test_createAgreement_storesCorrectPayers() public {
+    //     address payer1 = makeAddr("payer1");
+    //     address payer2 = makeAddr("payer2");
+
+    //     vm.deal(payer1, 1 ether);
+    //     vm.deal(payer2, 1 ether);
+
+    //     vm.prank(payer1);
+    //     escrow.createAgreement{value: 0.1 ether}(
+    //         payee,
+    //         arbiter,
+    //         block.timestamp + 1 days
+    //     );
+    //     vm.stopPrank();
+    //     vm.prank(payer2);
+    //     escrow.createAgreement{value: 0.1 ether}(
+    //         payee,
+    //         arbiter,
+    //         block.timestamp + 1 days
+    //     );
+    //     vm.stopPrank();
+    //     assertEq(escrow.agreements[1].payer, payable(payer1));
+    //     assertEq(escrow.agreements[2].payer, payable(payer2));
+    // }
 }

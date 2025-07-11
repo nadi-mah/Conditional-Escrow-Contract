@@ -52,7 +52,7 @@ contract Escrow {
             revert InvalidPayeeAddress(_payee, "The payee address in Invalid");
         }
 
-        uint agreementId = nextAgreementId + 1;
+        uint agreementId = nextAgreementId;
         Agreement memory newAgreement = Agreement(
             payable(msg.sender),
             payable(_payee),
