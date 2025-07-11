@@ -19,6 +19,25 @@ contract EscrowTest is Test {
         payer = makeAddr("payer");
     }
 
+    function test_RevertWhen_deadlineIsOutDated() public {
+        uint256 fake_time = 1_000_000;
+        vm.warp(fake_time);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidDeadline.selector,
+                block.timestamp - 1 days,
+                "Deadline should be time in future"
+            )
+        );
+        vm.deal(payer, 1 ether);
+        vm.prank(payer);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp - 1 days
+        );
+    }
     function test_RevertWhen_AmountIsZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(
