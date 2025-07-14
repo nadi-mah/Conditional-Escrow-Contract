@@ -137,4 +137,49 @@ contract EscrowTest is Test {
             block.timestamp + 1 days
         );
     }
+    function test_RevertWhen_payeeDidNotRequestCompletion() public {
+        address fakePayee = makeAddr("fakePayee");
+
+        vm.deal(payer, 1 ether);
+
+        vm.prank(payer);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidPayeeAddress.selector,
+                fakePayee,
+                "msg.sender is not the payee of the agreement"
+            )
+        );
+        vm.prank(fakePayee);
+        escrow.payeeRequestCompletion(0);
+    }
+    function test_RevertWhen_PayeeRequestCompletionLate() public {
+        vm.deal(payer, 1 ether);
+        vm.warp(1_000_000);
+        vm.prank(payer);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp
+        );
+        vm.stopPrank();
+
+        vm.warp(2_000_000);
+        vm.prank(payee);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidDeadline.selector,
+                block.timestamp,
+                "The agreement deadline has already expired"
+            )
+        );
+        escrow.payeeRequestCompletion(0);
+    }
 }

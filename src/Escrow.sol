@@ -68,10 +68,16 @@ contract Escrow {
         nextAgreementId++;
         emit NewAgreement(agreementId, msg.sender, msg.value);
     }
-    function payeeRequestCompletion(uint _agreementId) public {
-        Agreement storage currentAgreement = getAgreements(_agreementId);
+    function getAgreements(
+        uint _agreementId
+    ) external view returns (Agreement memory) {
+        return (agreements[_agreementId]);
+    }
 
-        if (currentAgreement.payee != msg.sender) {
+    function payeeRequestCompletion(uint _agreementId) public {
+        Agreement storage currentAgreement = agreements[_agreementId];
+
+        if (currentAgreement.payee != payable(msg.sender)) {
             revert InvalidPayeeAddress(
                 msg.sender,
                 "msg.sender is not the payee of the agreement"
@@ -84,11 +90,5 @@ contract Escrow {
             );
         }
         currentAgreement.payeeConfirmed = true;
-    }
-
-    function getAgreements(
-        uint _agreementId
-    ) external view returns (Agreement memory) {
-        return (agreements[_agreementId]);
     }
 }
