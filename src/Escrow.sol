@@ -68,4 +68,9 @@ contract Escrow {
         nextAgreementId++;
         emit NewAgreement(agreementId, msg.sender, msg.value);
     }
+    function getAgreements(
+        uint _agreementId
+    ) external view returns (Agreement memory) {
+        return (agreements[_agreementId]);
+    }
 }

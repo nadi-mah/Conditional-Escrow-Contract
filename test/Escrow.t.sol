@@ -96,28 +96,45 @@ contract EscrowTest is Test {
         vm.stopPrank();
         assertEq(escrow.nextAgreementId(), uint(2));
     }
-    // function test_createAgreement_storesCorrectPayers() public {
-    //     address payer1 = makeAddr("payer1");
-    //     address payer2 = makeAddr("payer2");
+    function test_createAgreement_handleStorePayers() public {
+        address payer1 = makeAddr("payer1");
+        address payer2 = makeAddr("payer2");
 
-    //     vm.deal(payer1, 1 ether);
-    //     vm.deal(payer2, 1 ether);
+        vm.deal(payer1, 1 ether);
+        vm.deal(payer2, 1 ether);
 
-    //     vm.prank(payer1);
-    //     escrow.createAgreement{value: 0.1 ether}(
-    //         payee,
-    //         arbiter,
-    //         block.timestamp + 1 days
-    //     );
-    //     vm.stopPrank();
-    //     vm.prank(payer2);
-    //     escrow.createAgreement{value: 0.1 ether}(
-    //         payee,
-    //         arbiter,
-    //         block.timestamp + 1 days
-    //     );
-    //     vm.stopPrank();
-    //     assertEq(escrow.agreements[1].payer, payable(payer1));
-    //     assertEq(escrow.agreements[2].payer, payable(payer2));
-    // }
+        vm.prank(payer1);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+        vm.stopPrank();
+        vm.prank(payer2);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        assertEq(escrow.getAgreements(uint(0)).payer, payer1);
+        assertEq(escrow.getAgreements(uint(1)).payer, payer2);
+    }
+    function test_createAgreement_eventHappened() public {
+        uint nextAgreementId = escrow.nextAgreementId();
+        uint256 expectedAmount = 0.1 ether;
+
+        vm.expectEmit(true, false, false, true);
+        emit Escrow.NewAgreement(nextAgreementId, payer, expectedAmount);
+
+        vm.deal(payer, 1 ether);
+        vm.prank(payer);
+
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+    }
 }
