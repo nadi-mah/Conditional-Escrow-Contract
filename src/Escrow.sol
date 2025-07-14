@@ -68,6 +68,24 @@ contract Escrow {
         nextAgreementId++;
         emit NewAgreement(agreementId, msg.sender, msg.value);
     }
+    function payeeRequestCompletion(uint _agreementId) public {
+        Agreement storage currentAgreement = getAgreements(_agreementId);
+
+        if (currentAgreement.payee != msg.sender) {
+            revert InvalidPayeeAddress(
+                msg.sender,
+                "msg.sender is not the payee of the agreement"
+            );
+        }
+        if (block.timestamp > currentAgreement.deadline) {
+            revert InvalidDeadline(
+                block.timestamp,
+                "The agreement deadline has already expired"
+            );
+        }
+        currentAgreement.payeeConfirmed = true;
+    }
+
     function getAgreements(
         uint _agreementId
     ) external view returns (Agreement memory) {
