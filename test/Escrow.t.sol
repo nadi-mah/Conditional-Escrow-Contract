@@ -18,6 +18,19 @@ contract EscrowTest is Test {
         payee = makeAddr("payee");
         payer = makeAddr("payer");
     }
+    function createTestAgreement(
+        address _payer,
+        address _payee,
+        address _arbiter,
+        uint256 _amount,
+        uint256 _deadline
+    ) internal returns (uint) {
+        vm.prank(_payer);
+        vm.deal(_payer, 1 ether);
+        escrow.createAgreement{value: _amount}(_payee, _arbiter, _deadline);
+        vm.stopPrank();
+        return escrow.nextAgreementId() - 1;
+    }
 
     function test_RevertWhen_deadlineIsOutDated() public {
         uint256 fake_time = 1_000_000;
@@ -140,16 +153,13 @@ contract EscrowTest is Test {
     function test_RevertWhen_payeeDidNotRequestCompletion() public {
         address fakePayee = makeAddr("fakePayee");
 
-        vm.deal(payer, 1 ether);
-
-        vm.prank(payer);
-        escrow.createAgreement{value: 0.1 ether}(
+        uint agreementId = createTestAgreement(
+            payer,
             payee,
             arbiter,
+            0.1 ether,
             block.timestamp + 1 days
         );
-        vm.stopPrank();
-
         vm.expectRevert(
             abi.encodeWithSelector(
                 Escrow.InvalidPayeeAddress.selector,
@@ -158,19 +168,10 @@ contract EscrowTest is Test {
             )
         );
         vm.prank(fakePayee);
-        escrow.payeeRequestCompletion(0);
+        escrow.payeeRequestCompletion(agreementId);
     }
     function test_RevertWhen_PayeeRequestCompletionLate() public {
-        vm.deal(payer, 1 ether);
-        vm.warp(1_000_000);
-        vm.prank(payer);
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp
-        );
-        vm.stopPrank();
-
+        createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
         vm.warp(2_000_000);
         vm.prank(payee);
         vm.expectRevert(
@@ -181,5 +182,61 @@ contract EscrowTest is Test {
             )
         );
         escrow.payeeRequestCompletion(0);
+    }
+    function test_payeeRequestCompletion_handlePayeeConfirmed() public {
+        vm.warp(2_000_000);
+
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp
+        );
+
+        vm.prank(payee);
+        vm.warp(1_000_000);
+        escrow.payeeRequestCompletion(agreementId);
+
+        assertEq(escrow.getAgreements(agreementId).payeeConfirmed, true);
+    }
+    function test_payeeRequestCompletion_eventHappened() public {
+        vm.warp(2_000_000);
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp
+        );
+        vm.expectEmit(true, true, false, true);
+        emit Escrow.payeeConfirmedTheAgreement(agreementId, payee);
+        vm.prank(payee);
+        escrow.payeeRequestCompletion(agreementId);
+    }
+    function test_revertWhen_payeeRequestMultipleTimes() public {
+        vm.warp(2_000_000);
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp
+        );
+
+        vm.prank(payee);
+        vm.warp(1_000_000);
+
+        escrow.payeeRequestCompletion(agreementId);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.AlreadyConfirmed.selector,
+                payee,
+                "Payee has already confirmed completion"
+            )
+        );
+        vm.prank(payee);
+        escrow.payeeRequestCompletion(agreementId);
     }
 }

@@ -5,11 +5,16 @@ contract Escrow {
     error InvalidDeadline(uint256 time, string message);
     error InvalidAmount(uint256 amount, string message);
     error InvalidPayeeAddress(address payee, string message);
+    error AlreadyConfirmed(address from, string message);
 
     event NewAgreement(
         uint indexed agreementId,
         address payerAddress,
         uint256 amount
+    );
+    event payeeConfirmedTheAgreement(
+        uint indexed agreementId,
+        address payeeAddress
     );
 
     uint public nextAgreementId = 0;
@@ -68,13 +73,13 @@ contract Escrow {
         nextAgreementId++;
         emit NewAgreement(agreementId, msg.sender, msg.value);
     }
-    function getAgreements(
-        uint _agreementId
-    ) external view returns (Agreement memory) {
-        return (agreements[_agreementId]);
-    }
 
     function payeeRequestCompletion(uint _agreementId) public {
+        if (agreements[_agreementId].payeeConfirmed)
+            revert AlreadyConfirmed(
+                msg.sender,
+                "Payee has already confirmed completion"
+            );
         Agreement storage currentAgreement = agreements[_agreementId];
 
         if (currentAgreement.payee != payable(msg.sender)) {
@@ -90,5 +95,12 @@ contract Escrow {
             );
         }
         currentAgreement.payeeConfirmed = true;
+        emit payeeConfirmedTheAgreement(_agreementId, msg.sender);
+    }
+
+    function getAgreements(
+        uint _agreementId
+    ) external view returns (Agreement memory) {
+        return (agreements[_agreementId]);
     }
 }
