@@ -5,7 +5,9 @@ contract Escrow {
     error InvalidDeadline(uint256 time, string message);
     error InvalidAmount(uint256 amount, string message);
     error InvalidPayeeAddress(address payee, string message);
+    error InvalidPayerAddress(address payer, string message);
     error AlreadyConfirmed(address from, string message);
+    error InvalidTimeForPayerToConfirm(address payer, string message);
 
     event NewAgreement(
         uint indexed agreementId,
@@ -15,6 +17,10 @@ contract Escrow {
     event payeeConfirmedTheAgreement(
         uint indexed agreementId,
         address payeeAddress
+    );
+    event payerConfirmedTheAgreement(
+        uint indexed agreementId,
+        address payerAddress
     );
 
     uint public nextAgreementId = 0;
@@ -75,12 +81,13 @@ contract Escrow {
     }
 
     function payeeRequestCompletion(uint _agreementId) public {
-        if (agreements[_agreementId].payeeConfirmed)
+        Agreement storage currentAgreement = agreements[_agreementId];
+
+        if (currentAgreement.payeeConfirmed)
             revert AlreadyConfirmed(
                 msg.sender,
                 "Payee has already confirmed completion"
             );
-        Agreement storage currentAgreement = agreements[_agreementId];
 
         if (currentAgreement.payee != payable(msg.sender)) {
             revert InvalidPayeeAddress(
@@ -96,6 +103,28 @@ contract Escrow {
         }
         currentAgreement.payeeConfirmed = true;
         emit payeeConfirmedTheAgreement(_agreementId, msg.sender);
+    }
+    function payerRequestCompletion(uint _agreementId) public {
+        Agreement storage currentAgreement = agreements[_agreementId];
+
+        if (currentAgreement.payerConfirmed)
+            revert AlreadyConfirmed(
+                msg.sender,
+                "Payer has already confirmed completion"
+            );
+
+        if (currentAgreement.payer != payable(msg.sender))
+            revert InvalidPayerAddress(
+                msg.sender,
+                "msg.sender is not the payer of the agreement"
+            );
+        if (!currentAgreement.payeeConfirmed)
+            revert InvalidTimeForPayerToConfirm(
+                msg.sender,
+                "The Payee of the agreement should confirm first"
+            );
+        currentAgreement.payerConfirmed = true;
+        emit payerConfirmedTheAgreement(_agreementId, msg.sender);
     }
 
     function getAgreements(

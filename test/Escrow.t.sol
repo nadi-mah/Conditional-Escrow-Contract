@@ -173,7 +173,6 @@ contract EscrowTest is Test {
     function test_RevertWhen_PayeeRequestCompletionLate() public {
         createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
         vm.warp(2_000_000);
-        vm.prank(payee);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Escrow.InvalidDeadline.selector,
@@ -181,6 +180,7 @@ contract EscrowTest is Test {
                 "The agreement deadline has already expired"
             )
         );
+        vm.prank(payee);
         escrow.payeeRequestCompletion(0);
     }
     function test_payeeRequestCompletion_handlePayeeConfirmed() public {
@@ -214,7 +214,7 @@ contract EscrowTest is Test {
         vm.prank(payee);
         escrow.payeeRequestCompletion(agreementId);
     }
-    function test_revertWhen_payeeRequestMultipleTimes() public {
+    function test_revertWhen_payeeRequestTwice() public {
         vm.warp(2_000_000);
         uint agreementId = createTestAgreement(
             payer,
@@ -238,5 +238,124 @@ contract EscrowTest is Test {
         );
         vm.prank(payee);
         escrow.payeeRequestCompletion(agreementId);
+    }
+    function test_RevertWhen_payerDidNotRequestCompletion() public {
+        vm.warp(2_000_000);
+
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp
+        );
+
+        vm.prank(payee);
+        vm.warp(1_000_000);
+        escrow.payeeRequestCompletion(agreementId);
+        vm.stopPrank();
+
+        address fakePayer = makeAddr("fakePayer");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidPayerAddress.selector,
+                fakePayer,
+                "msg.sender is not the payer of the agreement"
+            )
+        );
+        vm.prank(fakePayer);
+        escrow.payerRequestCompletion(agreementId);
+    }
+    function test_RevertWhen_payerRequestConfirmBeforePayee() public {
+        vm.warp(2_000_000);
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidTimeForPayerToConfirm.selector,
+                payer,
+                "The Payee of the agreement should confirm first"
+            )
+        );
+        vm.prank(payer);
+        escrow.payerRequestCompletion(agreementId);
+    }
+    function test_revertWhen_payerRequestTwice() public {
+        vm.warp(2_000_000);
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp
+        );
+
+        vm.prank(payee);
+        vm.warp(1_000_000);
+
+        escrow.payeeRequestCompletion(agreementId);
+        vm.stopPrank();
+
+        vm.prank(payer);
+        escrow.payerRequestCompletion(agreementId);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.AlreadyConfirmed.selector,
+                payer,
+                "Payer has already confirmed completion"
+            )
+        );
+        vm.prank(payer);
+        escrow.payerRequestCompletion(agreementId);
+    }
+    function test_payerRequestCompletion_eventHappened() public {
+        vm.warp(2_000_000);
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp
+        );
+
+        vm.prank(payee);
+        vm.warp(1_000_000);
+        escrow.payeeRequestCompletion(agreementId);
+        vm.stopPrank();
+
+        vm.expectEmit(true, true, false, true);
+        emit Escrow.payerConfirmedTheAgreement(agreementId, payer);
+
+        vm.prank(payer);
+        escrow.payerRequestCompletion(agreementId);
+    }
+    function test_payerRequestCompletion_handlePayerConfirmed() public {
+        vm.warp(2_000_000);
+
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp
+        );
+
+        vm.prank(payee);
+        vm.warp(1_000_000);
+        escrow.payeeRequestCompletion(agreementId);
+        vm.stopPrank();
+
+        vm.prank(payer);
+        escrow.payerRequestCompletion(agreementId);
+
+        assertEq(escrow.getAgreements(agreementId).payerConfirmed, true);
     }
 }
