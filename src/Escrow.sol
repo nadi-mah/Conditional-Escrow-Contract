@@ -8,6 +8,7 @@ contract Escrow {
     error InvalidPayerAddress(address payer, string message);
     error AlreadyConfirmed(address from, string message);
     error InvalidTimeForPayerToConfirm(address payer, string message);
+    error ReleaseNotAllowed(string message);
 
     event NewAgreement(
         uint indexed agreementId,
@@ -22,6 +23,7 @@ contract Escrow {
         uint indexed agreementId,
         address payerAddress
     );
+    event payeeReleasesFunds(uint indexed agreementId, uint256 amount);
 
     uint public nextAgreementId = 0;
 
@@ -126,10 +128,37 @@ contract Escrow {
         currentAgreement.payerConfirmed = true;
         emit payerConfirmedTheAgreement(_agreementId, msg.sender);
     }
+    function releaseFunds(uint _agreementId) public {
+        Agreement storage currentAgreement = agreements[_agreementId];
+
+        if (currentAgreement.payee != msg.sender) {
+            revert InvalidPayeeAddress(
+                msg.sender,
+                "Only payee of the agreement and release funds."
+            );
+        }
+        if (
+            !currentAgreement.payerConfirmed || !currentAgreement.payeeConfirmed
+        ) {
+            revert ReleaseNotAllowed("Both parties must confirm");
+        }
+        if (currentAgreement.currentState == State.Completed) {
+            revert ReleaseNotAllowed(
+                "Agreement is in Completed state, funds have already released"
+            );
+        }
+        currentAgreement.currentState = State.Completed;
+
+        emit payeeReleasesFunds(_agreementId, currentAgreement.amount);
+        currentAgreement.payee.transfer(currentAgreement.amount);
+    }
 
     function getAgreements(
         uint _agreementId
     ) external view returns (Agreement memory) {
         return (agreements[_agreementId]);
+    }
+    function getEscrowBalance() external view returns (uint256) {
+        return (address(this).balance);
     }
 }

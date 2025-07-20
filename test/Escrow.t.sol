@@ -358,4 +358,16 @@ contract EscrowTest is Test {
 
         assertEq(escrow.getAgreements(agreementId).payerConfirmed, true);
     }
+    function test_createAgreement_escrowBalanceChanges() public {
+        vm.deal(payer, 1 ether);
+        vm.prank(payer);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+
+        uint256 currentBalance = escrow.getEscrowBalance();
+        assertEq(currentBalance, 0.1 ether);
+    }
 }
