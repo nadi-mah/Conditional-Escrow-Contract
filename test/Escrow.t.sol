@@ -32,6 +32,7 @@ contract EscrowTest is Test {
         return escrow.nextAgreementId() - 1;
     }
 
+    // Group: createAgreement
     function test_RevertWhen_deadlineIsOutDated() public {
         uint256 fake_time = 1_000_000;
         vm.warp(fake_time);
@@ -150,6 +151,20 @@ contract EscrowTest is Test {
             block.timestamp + 1 days
         );
     }
+    function test_createAgreement_escrowBalanceChanges() public {
+        vm.deal(payer, 1 ether);
+        vm.prank(payer);
+        escrow.createAgreement{value: 0.1 ether}(
+            payee,
+            arbiter,
+            block.timestamp + 1 days
+        );
+
+        uint256 currentBalance = escrow.getEscrowBalance();
+        assertEq(currentBalance, 0.1 ether);
+    }
+
+    // Group: payeeRequestCompletion
     function test_RevertWhen_payeeDidNotRequestCompletion() public {
         address fakePayee = makeAddr("fakePayee");
 
@@ -239,6 +254,8 @@ contract EscrowTest is Test {
         vm.prank(payee);
         escrow.payeeRequestCompletion(agreementId);
     }
+
+    // Group: payerRequestCompletion
     function test_RevertWhen_payerDidNotRequestCompletion() public {
         vm.warp(2_000_000);
 
@@ -358,16 +375,89 @@ contract EscrowTest is Test {
 
         assertEq(escrow.getAgreements(agreementId).payerConfirmed, true);
     }
-    function test_createAgreement_escrowBalanceChanges() public {
-        vm.deal(payer, 1 ether);
-        vm.prank(payer);
-        escrow.createAgreement{value: 0.1 ether}(
+
+    // Group: releaseFunds
+    function test_RevertWhen_NotPayeeCallsReleaseFunds() public {
+        uint agreementId = createTestAgreement(
+            payer,
             payee,
             arbiter,
-            block.timestamp + 1 days
+            0.1 ether,
+            2_000_000
         );
+        // vm.prank(payee);
+        // vm.warp(1_000_000);
+        // escrow.payeeRequestCompletion(agreementId);
+        // vm.stopPrank();
 
-        uint256 currentBalance = escrow.getEscrowBalance();
-        assertEq(currentBalance, 0.1 ether);
+        // vm.prank(payer);
+        // escrow.payerRequestCompletion(agreementId);
+        // vm.stopPrank();
+
+        address fakePayee = makeAddr("fakePayee");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidPayeeAddress.selector,
+                fakePayee,
+                "Only payee of the agreement and release funds."
+            )
+        );
+        vm.prank(fakePayee);
+        escrow.releaseFunds(agreementId);
+    }
+    function test_RevertWhen_releaseFundsCallsBeforePayerConfirms() public {
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            2_000_000
+        );
+        vm.prank(payee);
+        vm.warp(1_000_000);
+        escrow.payeeRequestCompletion(agreementId);
+        vm.stopPrank();
+
+        // vm.prank(payer);
+        // escrow.payerRequestCompletion(agreementId);
+        // vm.stopPrank();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.ReleaseNotAllowed.selector,
+                "Both parties must confirm"
+            )
+        );
+        vm.prank(payee);
+        escrow.releaseFunds(agreementId);
+    }
+    function test_RevertWhen_agreementStateIsAlreadyCompleted() public {
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            2_000_000
+        );
+        vm.prank(payee);
+        vm.warp(1_000_000);
+        escrow.payeeRequestCompletion(agreementId);
+        vm.stopPrank();
+
+        vm.prank(payer);
+        escrow.payerRequestCompletion(agreementId);
+        vm.stopPrank();
+
+        vm.prank(payee);
+        escrow.releaseFunds(agreementId);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.ReleaseNotAllowed.selector,
+                "Agreement is in Completed state, funds have already released"
+            )
+        );
+        vm.prank(payee);
+        escrow.releaseFunds(agreementId);
     }
 }
