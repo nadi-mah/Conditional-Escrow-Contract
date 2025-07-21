@@ -32,6 +32,16 @@ contract EscrowTest is Test {
         return escrow.nextAgreementId() - 1;
     }
 
+    function confirmByBoth(uint _agreementId) internal {
+        vm.prank(payee);
+        escrow.payeeRequestCompletion(_agreementId);
+        vm.stopPrank();
+
+        vm.prank(payer);
+        escrow.payerRequestCompletion(_agreementId);
+        vm.stopPrank();
+    }
+
     // Group: createAgreement
     function test_RevertWhen_deadlineIsOutDated() public {
         uint256 fake_time = 1_000_000;
@@ -456,6 +466,58 @@ contract EscrowTest is Test {
                 Escrow.ReleaseNotAllowed.selector,
                 "Agreement is in Completed state, funds have already released"
             )
+        );
+        vm.prank(payee);
+        escrow.releaseFunds(agreementId);
+    }
+    function test_ReleaseFunds_StateChangesToCompleted() public {
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp + 1 days
+        );
+        confirmByBoth(agreementId);
+
+        vm.prank(payee);
+        escrow.releaseFunds(agreementId);
+        assertEq(
+            uint8(escrow.getAgreements(agreementId).currentState),
+            uint8(Escrow.State.Completed)
+        );
+    }
+    function test_ReleaseFunds_transferFunds() public {
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp + 1 days
+        );
+
+        confirmByBoth(agreementId);
+
+        vm.prank(payee);
+        escrow.releaseFunds(agreementId);
+        assertEq(payee.balance, 0.1 ether);
+        assertEq(address(escrow).balance, 0);
+    }
+    function test_ReleaseFunds_eventHappened() public {
+        uint agreementId = createTestAgreement(
+            payer,
+            payee,
+            arbiter,
+            0.1 ether,
+            block.timestamp + 1 days
+        );
+
+        confirmByBoth(agreementId);
+
+        vm.expectEmit(true, true, false, true);
+        emit Escrow.payeeReleasesFunds(
+            agreementId,
+            escrow.getAgreements(agreementId).amount
         );
         vm.prank(payee);
         escrow.releaseFunds(agreementId);
