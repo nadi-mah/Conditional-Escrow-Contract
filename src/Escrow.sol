@@ -9,6 +9,9 @@ contract Escrow {
     error AlreadyConfirmed(address from, string message);
     error InvalidTimeForPayerToConfirm(address payer, string message);
     error ReleaseNotAllowed(string message);
+    error NotParticipant(string message);
+    error DisputeTooEarly(string message);
+    error InvalidStateForDispute(string message);
 
     event NewAgreement(
         uint indexed agreementId,
@@ -151,6 +154,40 @@ contract Escrow {
 
         emit payeeReleasesFunds(_agreementId, currentAgreement.amount);
         currentAgreement.payee.transfer(currentAgreement.amount);
+    }
+    function raiseDispute(uint _agreementId) public {
+        Agreement storage currentAgreement = agreements[_agreementId];
+
+        if (
+            msg.sender != currentAgreement.payee &&
+            msg.sender != currentAgreement.payer
+        ) {
+            revert NotParticipant(
+                "msg.sender is not payer or payee of the agreement."
+            );
+        }
+        if (currentAgreement.deadline > block.timestamp) {
+            revert DisputeTooEarly(
+                "Dispute can only be raised after the agreement deadline."
+            );
+        }
+        if (
+            currentAgreement.payeeConfirmed && currentAgreement.payerConfirmed
+        ) {
+            revert InvalidStateForDispute(
+                "Cannot raise a dispute when both parties have confirmed."
+            );
+        }
+        if (currentAgreement.currentState != State.Funded) {
+            revert InvalidStateForDispute(
+                "Dispute can only be raised when agreement is in Funded state."
+            );
+        }
+        currentAgreement.currentState = State.InDispute;
+        /** Dispute:*/
+        // payee: confirmed / payer: notConfirmed => disappointed payer => arbiter act
+        // payee: notConfirmed / payer: notConfirmed => payee did not do the work => transfer money to payer
+        // payee: confirmed / payer: notConfirmed => payer fo not want money to transfer => arbiter act
     }
 
     function getAgreements(
