@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-contract Escrow {
+import "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
+contract Escrow is ReentrancyGuard {
     error InvalidDeadline(uint256 time, string message);
     error InvalidAmount(uint256 amount, string message);
     error InvalidPayeeAddress(address payee, string message);
@@ -101,7 +103,7 @@ contract Escrow {
         emit payerConfirmedTheAgreement(_agreementId, msg.sender);
     }
 
-    function releaseFunds(uint256 _agreementId) public {
+    function releaseFunds(uint256 _agreementId) public nonReentrant {
         Agreement storage currentAgreement = agreements[_agreementId];
 
         if (currentAgreement.payee != msg.sender) {
@@ -145,7 +147,7 @@ contract Escrow {
         // payee: confirmed / payer: notConfirmed => payer fo not want money to transfer => arbiter act
     }
 
-    function resolveDispute(uint256 _agreementId, address winner) public {
+    function resolveDispute(uint256 _agreementId, address winner) public nonReentrant {
         Agreement storage currentAgreement = agreements[_agreementId];
 
         if (msg.sender != currentAgreement.arbiter) {
