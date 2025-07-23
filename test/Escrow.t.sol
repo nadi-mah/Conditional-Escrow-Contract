@@ -18,13 +18,11 @@ contract EscrowTest is Test {
         payee = makeAddr("payee");
         payer = makeAddr("payer");
     }
-    function createTestAgreement(
-        address _payer,
-        address _payee,
-        address _arbiter,
-        uint256 _amount,
-        uint256 _deadline
-    ) internal returns (uint) {
+
+    function createTestAgreement(address _payer, address _payee, address _arbiter, uint256 _amount, uint256 _deadline)
+        internal
+        returns (uint256)
+    {
         vm.prank(_payer);
         vm.deal(_payer, 1 ether);
         escrow.createAgreement{value: _amount}(_payee, _arbiter, _deadline);
@@ -32,7 +30,7 @@ contract EscrowTest is Test {
         return escrow.nextAgreementId() - 1;
     }
 
-    function confirmByBoth(uint _agreementId) internal {
+    function confirmByBoth(uint256 _agreementId) internal {
         vm.prank(payee);
         escrow.payeeRequestCompletion(_agreementId);
         vm.stopPrank();
@@ -49,53 +47,32 @@ contract EscrowTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.InvalidDeadline.selector,
-                block.timestamp - 1 days,
-                "Deadline should be time in future"
+                Escrow.InvalidDeadline.selector, block.timestamp - 1 days, "Deadline should be time in future"
             )
         );
         vm.deal(payer, 1 ether);
         vm.prank(payer);
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp - 1 days
-        );
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, block.timestamp - 1 days);
     }
+
     function test_RevertWhen_AmountIsZero() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Escrow.InvalidAmount.selector,
-                0,
-                "Amount must be greater than 0"
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Escrow.InvalidAmount.selector, 0, "Amount must be greater than 0"));
 
         vm.prank(payer);
-        escrow.createAgreement{value: 0}(
-            payee,
-            arbiter,
-            block.timestamp + 1 days
-        );
+        escrow.createAgreement{value: 0}(payee, arbiter, block.timestamp + 1 days);
     }
+
     function test_RevertWhen_PayeeAddressIsInvalid() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Escrow.InvalidPayeeAddress.selector,
-                address(0),
-                "The payee address in Invalid"
-            )
+            abi.encodeWithSelector(Escrow.InvalidPayeeAddress.selector, address(0), "The payee address in Invalid")
         );
 
         payee = address(0);
         vm.deal(payer, 1 ether);
         vm.prank(payer);
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp + 1 days
-        );
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, block.timestamp + 1 days);
     }
+
     function test_createAgreement_handleNextAgreementId() public {
         address payer1 = makeAddr("payer1");
         address payer2 = makeAddr("payer2");
@@ -104,22 +81,15 @@ contract EscrowTest is Test {
         vm.deal(payer2, 1 ether);
 
         vm.prank(payer1);
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp + 1 days
-        );
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, block.timestamp + 1 days);
         vm.stopPrank();
-        assertEq(escrow.nextAgreementId(), uint(1));
+        assertEq(escrow.nextAgreementId(), uint256(1));
         vm.prank(payer2);
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp + 1 days
-        );
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, block.timestamp + 1 days);
         vm.stopPrank();
-        assertEq(escrow.nextAgreementId(), uint(2));
+        assertEq(escrow.nextAgreementId(), uint256(2));
     }
+
     function test_createAgreement_handleStorePayers() public {
         address payer1 = makeAddr("payer1");
         address payer2 = makeAddr("payer2");
@@ -128,25 +98,18 @@ contract EscrowTest is Test {
         vm.deal(payer2, 1 ether);
 
         vm.prank(payer1);
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp + 1 days
-        );
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, block.timestamp + 1 days);
         vm.stopPrank();
         vm.prank(payer2);
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp + 1 days
-        );
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, block.timestamp + 1 days);
         vm.stopPrank();
 
-        assertEq(escrow.getAgreements(uint(0)).payer, payer1);
-        assertEq(escrow.getAgreements(uint(1)).payer, payer2);
+        assertEq(escrow.getAgreements(uint256(0)).payer, payer1);
+        assertEq(escrow.getAgreements(uint256(1)).payer, payer2);
     }
+
     function test_createAgreement_eventHappened() public {
-        uint nextAgreementId = escrow.nextAgreementId();
+        uint256 nextAgreementId = escrow.nextAgreementId();
         uint256 expectedAmount = 0.1 ether;
 
         vm.expectEmit(true, false, false, true);
@@ -155,20 +118,13 @@ contract EscrowTest is Test {
         vm.deal(payer, 1 ether);
         vm.prank(payer);
 
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp + 1 days
-        );
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, block.timestamp + 1 days);
     }
+
     function test_createAgreement_escrowBalanceChanges() public {
         vm.deal(payer, 1 ether);
         vm.prank(payer);
-        escrow.createAgreement{value: 0.1 ether}(
-            payee,
-            arbiter,
-            block.timestamp + 1 days
-        );
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, block.timestamp + 1 days);
 
         uint256 currentBalance = escrow.getEscrowBalance();
         assertEq(currentBalance, 0.1 ether);
@@ -178,46 +134,32 @@ contract EscrowTest is Test {
     function test_RevertWhen_payeeDidNotRequestCompletion() public {
         address fakePayee = makeAddr("fakePayee");
 
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp + 1 days
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.InvalidPayeeAddress.selector,
-                fakePayee,
-                "msg.sender is not the payee of the agreement"
+                Escrow.InvalidPayeeAddress.selector, fakePayee, "msg.sender is not the payee of the agreement"
             )
         );
         vm.prank(fakePayee);
         escrow.payeeRequestCompletion(agreementId);
     }
+
     function test_RevertWhen_PayeeRequestCompletionLate() public {
         createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
         vm.warp(2_000_000);
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.InvalidDeadline.selector,
-                block.timestamp,
-                "The agreement deadline has already expired"
+                Escrow.InvalidDeadline.selector, block.timestamp, "The agreement deadline has already expired"
             )
         );
         vm.prank(payee);
         escrow.payeeRequestCompletion(0);
     }
+
     function test_payeeRequestCompletion_handlePayeeConfirmed() public {
         vm.warp(2_000_000);
 
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -225,29 +167,19 @@ contract EscrowTest is Test {
 
         assertEq(escrow.getAgreements(agreementId).payeeConfirmed, true);
     }
+
     function test_payeeRequestCompletion_eventHappened() public {
         vm.warp(2_000_000);
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
         vm.expectEmit(true, true, false, true);
         emit Escrow.payeeConfirmedTheAgreement(agreementId, payee);
         vm.prank(payee);
         escrow.payeeRequestCompletion(agreementId);
     }
+
     function test_revertWhen_payeeRequestTwice() public {
         vm.warp(2_000_000);
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -255,11 +187,7 @@ contract EscrowTest is Test {
         escrow.payeeRequestCompletion(agreementId);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Escrow.AlreadyConfirmed.selector,
-                payee,
-                "Payee has already confirmed completion"
-            )
+            abi.encodeWithSelector(Escrow.AlreadyConfirmed.selector, payee, "Payee has already confirmed completion")
         );
         vm.prank(payee);
         escrow.payeeRequestCompletion(agreementId);
@@ -269,13 +197,7 @@ contract EscrowTest is Test {
     function test_RevertWhen_payerDidNotRequestCompletion() public {
         vm.warp(2_000_000);
 
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -286,43 +208,29 @@ contract EscrowTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.InvalidPayerAddress.selector,
-                fakePayer,
-                "msg.sender is not the payer of the agreement"
+                Escrow.InvalidPayerAddress.selector, fakePayer, "msg.sender is not the payer of the agreement"
             )
         );
         vm.prank(fakePayer);
         escrow.payerRequestCompletion(agreementId);
     }
+
     function test_RevertWhen_payerRequestConfirmBeforePayee() public {
         vm.warp(2_000_000);
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.InvalidTimeForPayerToConfirm.selector,
-                payer,
-                "The Payee of the agreement should confirm first"
+                Escrow.InvalidTimeForPayerToConfirm.selector, payer, "The Payee of the agreement should confirm first"
             )
         );
         vm.prank(payer);
         escrow.payerRequestCompletion(agreementId);
     }
+
     function test_revertWhen_payerRequestTwice() public {
         vm.warp(2_000_000);
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -334,24 +242,15 @@ contract EscrowTest is Test {
         escrow.payerRequestCompletion(agreementId);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Escrow.AlreadyConfirmed.selector,
-                payer,
-                "Payer has already confirmed completion"
-            )
+            abi.encodeWithSelector(Escrow.AlreadyConfirmed.selector, payer, "Payer has already confirmed completion")
         );
         vm.prank(payer);
         escrow.payerRequestCompletion(agreementId);
     }
+
     function test_payerRequestCompletion_eventHappened() public {
         vm.warp(2_000_000);
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -364,16 +263,11 @@ contract EscrowTest is Test {
         vm.prank(payer);
         escrow.payerRequestCompletion(agreementId);
     }
+
     function test_payerRequestCompletion_handlePayerConfirmed() public {
         vm.warp(2_000_000);
 
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -388,13 +282,7 @@ contract EscrowTest is Test {
 
     // Group: releaseFunds
     function test_RevertWhen_NotPayeeCallsReleaseFunds() public {
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            2_000_000
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, 2_000_000);
         // vm.prank(payee);
         // vm.warp(1_000_000);
         // escrow.payeeRequestCompletion(agreementId);
@@ -407,22 +295,15 @@ contract EscrowTest is Test {
         address fakePayee = makeAddr("fakePayee");
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.InvalidPayeeAddress.selector,
-                fakePayee,
-                "Only payee of the agreement and release funds."
+                Escrow.InvalidPayeeAddress.selector, fakePayee, "Only payee of the agreement and release funds."
             )
         );
         vm.prank(fakePayee);
         escrow.releaseFunds(agreementId);
     }
+
     function test_RevertWhen_releaseFundsCallsBeforePayerConfirms() public {
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            2_000_000
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, 2_000_000);
         vm.prank(payee);
         vm.warp(1_000_000);
         escrow.payeeRequestCompletion(agreementId);
@@ -432,23 +313,13 @@ contract EscrowTest is Test {
         // escrow.payerRequestCompletion(agreementId);
         // vm.stopPrank();
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Escrow.ReleaseNotAllowed.selector,
-                "Both parties must confirm"
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Escrow.ReleaseNotAllowed.selector, "Both parties must confirm"));
         vm.prank(payee);
         escrow.releaseFunds(agreementId);
     }
+
     function test_RevertWhen_agreementStateIsAlreadyCompleted() public {
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            2_000_000
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, 2_000_000);
         vm.prank(payee);
         vm.warp(1_000_000);
         escrow.payeeRequestCompletion(agreementId);
@@ -463,38 +334,24 @@ contract EscrowTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.ReleaseNotAllowed.selector,
-                "Agreement is in Completed state, funds have already released"
+                Escrow.ReleaseNotAllowed.selector, "Agreement is in Completed state, funds have already released"
             )
         );
         vm.prank(payee);
         escrow.releaseFunds(agreementId);
     }
+
     function test_ReleaseFunds_StateChangesToCompleted() public {
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp + 1 days
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
         confirmByBoth(agreementId);
 
         vm.prank(payee);
         escrow.releaseFunds(agreementId);
-        assertEq(
-            uint8(escrow.getAgreements(agreementId).currentState),
-            uint8(Escrow.State.Completed)
-        );
+        assertEq(uint8(escrow.getAgreements(agreementId).currentState), uint8(Escrow.State.Completed));
     }
+
     function test_ReleaseFunds_transferFunds() public {
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp + 1 days
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
 
         confirmByBoth(agreementId);
 
@@ -503,22 +360,14 @@ contract EscrowTest is Test {
         assertEq(payee.balance, 0.1 ether);
         assertEq(address(escrow).balance, 0);
     }
+
     function test_ReleaseFunds_eventHappened() public {
-        uint agreementId = createTestAgreement(
-            payer,
-            payee,
-            arbiter,
-            0.1 ether,
-            block.timestamp + 1 days
-        );
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
 
         confirmByBoth(agreementId);
 
         vm.expectEmit(true, true, false, true);
-        emit Escrow.payeeReleasesFunds(
-            agreementId,
-            escrow.getAgreements(agreementId).amount
-        );
+        emit Escrow.payeeReleasesFunds(agreementId, escrow.getAgreements(agreementId).amount);
         vm.prank(payee);
         escrow.releaseFunds(agreementId);
     }
