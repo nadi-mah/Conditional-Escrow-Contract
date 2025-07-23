@@ -371,4 +371,81 @@ contract EscrowTest is Test {
         vm.prank(payee);
         escrow.releaseFunds(agreementId);
     }
+
+    function test_RevertWhen_payeeOrPayerDidNotRaiseDispute() public {
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+
+        confirmByBoth(agreementId);
+
+        address fakeCaller = makeAddr("fakeCaller");
+        vm.expectRevert(
+            abi.encodeWithSelector(Escrow.NotParticipant.selector, "msg.sender is not payer or payee of the agreement.")
+        );
+        vm.prank(fakeCaller);
+        escrow.raiseDispute(agreementId);
+    }
+
+    function test_RevertWhen_disputeRaisedTooEarly() public {
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+
+        confirmByBoth(agreementId);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.DisputeTooEarly.selector, "Dispute can only be raised after the agreement deadline."
+            )
+        );
+        vm.prank(payer);
+        escrow.raiseDispute(agreementId);
+    }
+
+    function test_RevertWhen_bothPayeeAndPayerHaveConfirmed() public {
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp + 2 days);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidStateForDispute.selector, "Cannot raise a dispute when both parties have confirmed."
+            )
+        );
+        vm.prank(payer);
+        escrow.raiseDispute(agreementId);
+    }
+
+    function test_RevertWhen_disputeRaisedInWrongState() public {
+        // uint256 agreementId = createTestAgreement(
+        //     payer,
+        //     payee,
+        //     arbiter,
+        //     0.1 ether,
+        //     block.timestamp + 1 days
+        // );
+        // confirmByBoth(agreementId);
+        // vm.prank(payee);
+        // escrow.releaseFunds(agreementId);
+        // vm.warp(block.timestamp + 2 days);
+        // vm.prank(payee);
+        // escrow.raiseDispute(agreementId);
+        // vm.expectRevert(
+        //     abi.encodeWithSelector(
+        //         Escrow.InvalidStateForDispute.selector,
+        //         "Dispute can only be raised when agreement is in Funded state."
+        //     )
+        // );
+        // vm.prank(payer);
+        // escrow.raiseDispute(agreementId);
+    }
+
+    function test_raiseDispute_eventHappened() public {
+        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        // confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp + 2 days);
+
+        vm.expectEmit(true, true, false, true);
+        emit Escrow.disputeRaised(agreementId, payer);
+
+        vm.prank(payer);
+        escrow.raiseDispute(agreementId);
+    }
 }

@@ -6,17 +6,24 @@ contract Escrow {
     error InvalidAmount(uint256 amount, string message);
     error InvalidPayeeAddress(address payee, string message);
     error InvalidPayerAddress(address payer, string message);
+    error InvalidArbiterAddress(address arbiter, string message);
+    error InvalidWinnerAddress(address winner, string message);
     error AlreadyConfirmed(address from, string message);
     error InvalidTimeForPayerToConfirm(address payer, string message);
     error ReleaseNotAllowed(string message);
     error NotParticipant(string message);
     error DisputeTooEarly(string message);
     error InvalidStateForDispute(string message);
+    error InvalidStateForResolve(string message);
 
     event NewAgreement(uint256 indexed agreementId, address payerAddress, uint256 amount);
     event payeeConfirmedTheAgreement(uint256 indexed agreementId, address payeeAddress);
     event payerConfirmedTheAgreement(uint256 indexed agreementId, address payerAddress);
     event payeeReleasesFunds(uint256 indexed agreementId, uint256 amount);
+
+    event disputeRaised(uint256 indexed agreementId, address raiser);
+
+    event arbiterReleasesFunds(uint256 indexed agreementId, uint256 amount);
 
     uint256 public nextAgreementId = 0;
 
@@ -128,12 +135,32 @@ contract Escrow {
             revert InvalidStateForDispute("Dispute can only be raised when agreement is in Funded state.");
         }
         currentAgreement.currentState = State.InDispute;
+
+        emit disputeRaised(_agreementId, msg.sender);
         /**
          * Dispute:
          */
         // payee: confirmed / payer: notConfirmed => disappointed payer => arbiter act
         // payee: notConfirmed / payer: notConfirmed => payee did not do the work => transfer money to payer
         // payee: confirmed / payer: notConfirmed => payer fo not want money to transfer => arbiter act
+    }
+
+    function resolveDispute(uint256 _agreementId, address winner) public {
+        Agreement storage currentAgreement = agreements[_agreementId];
+
+        if (msg.sender != currentAgreement.arbiter) {
+            revert InvalidArbiterAddress(msg.sender, "msg.sender is not the arbiter of the agreement.");
+        }
+        if (currentAgreement.currentState != State.InDispute) {
+            revert InvalidStateForResolve("Dispute can only be resolved when agreement is in 'InDispute' state.");
+        }
+        if (winner != currentAgreement.payer && winner != currentAgreement.payee) {
+            revert InvalidWinnerAddress(winner, "Winner address is not payer or payee of the agreement.");
+        }
+        currentAgreement.currentState = State.Completed;
+        emit arbiterReleasesFunds(_agreementId, currentAgreement.amount);
+
+        payable(winner).transfer(currentAgreement.amount);
     }
 
     function getAgreements(uint256 _agreementId) external view returns (Agreement memory) {
