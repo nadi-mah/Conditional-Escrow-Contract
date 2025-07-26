@@ -19,13 +19,10 @@ contract EscrowTest is Test {
         payer = makeAddr("payer");
     }
 
-    function createTestAgreement(address _payer, address _payee, address _arbiter, uint256 _amount, uint256 _deadline)
-        internal
-        returns (uint256)
-    {
-        vm.prank(_payer);
-        vm.deal(_payer, 1 ether);
-        escrow.createAgreement{value: _amount}(_payee, _arbiter, _deadline);
+    function createTestAgreement(uint256 _deadline) internal returns (uint256) {
+        vm.prank(payer);
+        vm.deal(payer, 1 ether);
+        escrow.createAgreement{value: 0.1 ether}(payee, arbiter, _deadline);
         vm.stopPrank();
         return escrow.nextAgreementId() - 1;
     }
@@ -35,6 +32,18 @@ contract EscrowTest is Test {
         escrow.payeeRequestCompletion(_agreementId);
         vm.stopPrank();
 
+        vm.prank(payer);
+        escrow.payerRequestCompletion(_agreementId);
+        vm.stopPrank();
+    }
+
+    function confirmByPayee(uint256 _agreementId) internal {
+        vm.prank(payee);
+        escrow.payeeRequestCompletion(_agreementId);
+        vm.stopPrank();
+    }
+
+    function confrimByPayer(uint256 _agreementId) internal {
         vm.prank(payer);
         escrow.payerRequestCompletion(_agreementId);
         vm.stopPrank();
@@ -134,7 +143,7 @@ contract EscrowTest is Test {
     function test_RevertWhen_payeeDidNotRequestCompletion() public {
         address fakePayee = makeAddr("fakePayee");
 
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Escrow.InvalidPayeeAddress.selector, fakePayee, "msg.sender is not the payee of the agreement"
@@ -145,7 +154,7 @@ contract EscrowTest is Test {
     }
 
     function test_RevertWhen_PayeeRequestCompletionLate() public {
-        createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        createTestAgreement(block.timestamp);
         vm.warp(2_000_000);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -159,7 +168,7 @@ contract EscrowTest is Test {
     function test_payeeRequestCompletion_handlePayeeConfirmed() public {
         vm.warp(2_000_000);
 
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        uint256 agreementId = createTestAgreement(block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -170,16 +179,16 @@ contract EscrowTest is Test {
 
     function test_payeeRequestCompletion_eventHappened() public {
         vm.warp(2_000_000);
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        uint256 agreementId = createTestAgreement(block.timestamp);
         vm.expectEmit(true, true, false, true);
-        emit Escrow.payeeConfirmedTheAgreement(agreementId, payee);
+        emit Escrow.PayeeConfirmedTheAgreement(agreementId, payee);
         vm.prank(payee);
         escrow.payeeRequestCompletion(agreementId);
     }
 
     function test_revertWhen_payeeRequestTwice() public {
         vm.warp(2_000_000);
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        uint256 agreementId = createTestAgreement(block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -197,7 +206,7 @@ contract EscrowTest is Test {
     function test_RevertWhen_payerDidNotRequestCompletion() public {
         vm.warp(2_000_000);
 
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        uint256 agreementId = createTestAgreement(block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -217,7 +226,7 @@ contract EscrowTest is Test {
 
     function test_RevertWhen_payerRequestConfirmBeforePayee() public {
         vm.warp(2_000_000);
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        uint256 agreementId = createTestAgreement(block.timestamp);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -230,7 +239,7 @@ contract EscrowTest is Test {
 
     function test_revertWhen_payerRequestTwice() public {
         vm.warp(2_000_000);
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        uint256 agreementId = createTestAgreement(block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -250,7 +259,7 @@ contract EscrowTest is Test {
 
     function test_payerRequestCompletion_eventHappened() public {
         vm.warp(2_000_000);
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        uint256 agreementId = createTestAgreement(block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -258,7 +267,7 @@ contract EscrowTest is Test {
         vm.stopPrank();
 
         vm.expectEmit(true, true, false, true);
-        emit Escrow.payerConfirmedTheAgreement(agreementId, payer);
+        emit Escrow.PayerConfirmedTheAgreement(agreementId, payer);
 
         vm.prank(payer);
         escrow.payerRequestCompletion(agreementId);
@@ -267,7 +276,7 @@ contract EscrowTest is Test {
     function test_payerRequestCompletion_handlePayerConfirmed() public {
         vm.warp(2_000_000);
 
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp);
+        uint256 agreementId = createTestAgreement(block.timestamp);
 
         vm.prank(payee);
         vm.warp(1_000_000);
@@ -282,7 +291,7 @@ contract EscrowTest is Test {
 
     // Group: releaseFunds
     function test_RevertWhen_NotPayeeCallsReleaseFunds() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, 2_000_000);
+        uint256 agreementId = createTestAgreement(2_000_000);
         // vm.prank(payee);
         // vm.warp(1_000_000);
         // escrow.payeeRequestCompletion(agreementId);
@@ -303,7 +312,7 @@ contract EscrowTest is Test {
     }
 
     function test_RevertWhen_releaseFundsCallsBeforePayerConfirms() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, 2_000_000);
+        uint256 agreementId = createTestAgreement(2_000_000);
         vm.prank(payee);
         vm.warp(1_000_000);
         escrow.payeeRequestCompletion(agreementId);
@@ -319,7 +328,7 @@ contract EscrowTest is Test {
     }
 
     function test_RevertWhen_agreementStateIsAlreadyCompleted() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, 2_000_000);
+        uint256 agreementId = createTestAgreement(2_000_000);
         vm.prank(payee);
         vm.warp(1_000_000);
         escrow.payeeRequestCompletion(agreementId);
@@ -342,7 +351,7 @@ contract EscrowTest is Test {
     }
 
     function test_ReleaseFunds_StateChangesToCompleted() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         confirmByBoth(agreementId);
 
         vm.prank(payee);
@@ -351,7 +360,7 @@ contract EscrowTest is Test {
     }
 
     function test_ReleaseFunds_transferFunds() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
 
         confirmByBoth(agreementId);
 
@@ -362,19 +371,19 @@ contract EscrowTest is Test {
     }
 
     function test_ReleaseFunds_eventHappened() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
 
         confirmByBoth(agreementId);
 
         vm.expectEmit(true, true, false, true);
-        emit Escrow.payeeReleasesFunds(agreementId, escrow.getAgreements(agreementId).amount);
+        emit Escrow.PayeeReleasesFunds(agreementId, escrow.getAgreements(agreementId).amount);
         vm.prank(payee);
         escrow.releaseFunds(agreementId);
     }
 
     // Group: raiseDispute
     function test_RevertWhen_payeeOrPayerDidNotRaiseDispute() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
 
         confirmByBoth(agreementId);
 
@@ -387,7 +396,7 @@ contract EscrowTest is Test {
     }
 
     function test_RevertWhen_disputeRaisedTooEarly() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
 
         confirmByBoth(agreementId);
         vm.expectRevert(
@@ -400,7 +409,7 @@ contract EscrowTest is Test {
     }
 
     function test_RevertWhen_bothPayeeAndPayerHaveConfirmed() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         confirmByBoth(agreementId);
 
         vm.warp(block.timestamp + 2 days);
@@ -415,10 +424,6 @@ contract EscrowTest is Test {
 
     function test_RevertWhen_disputeRaisedInWrongState() public {
         // uint256 agreementId = createTestAgreement(
-        //     payer,
-        //     payee,
-        //     arbiter,
-        //     0.1 ether,
         //     block.timestamp + 1 days
         // );
         // confirmByBoth(agreementId);
@@ -438,20 +443,20 @@ contract EscrowTest is Test {
     }
 
     function test_raiseDispute_eventHappened() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         // confirmByBoth(agreementId);
 
         vm.warp(block.timestamp + 2 days);
 
         vm.expectEmit(true, true, false, true);
-        emit Escrow.disputeRaised(agreementId, payer);
+        emit Escrow.DisputeRaised(agreementId, payer);
 
         vm.prank(payer);
         escrow.raiseDispute(agreementId);
     }
 
     function test_raiseDispute_stateChangesToInDispute() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         // confirmByBoth(agreementId);
 
         vm.warp(block.timestamp + 2 days);
@@ -464,7 +469,7 @@ contract EscrowTest is Test {
 
     // Group: resolveDispute
     function test_RevertWhen_arbiterDidNotResolveDispute() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         // confirmByBoth(agreementId);
 
         vm.warp(block.timestamp + 2 days);
@@ -484,7 +489,7 @@ contract EscrowTest is Test {
     }
 
     function test_RevertWhen_agreementIsInFundedState() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         // confirmByBoth(agreementId);
 
         // vm.warp(block.timestamp + 2 days);
@@ -504,7 +509,7 @@ contract EscrowTest is Test {
     }
 
     function test_RevertWhen_agreementIsInCompletedState() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         confirmByBoth(agreementId);
 
         vm.warp(block.timestamp + 2 days);
@@ -523,7 +528,7 @@ contract EscrowTest is Test {
     }
 
     function test_RevertWhen_winnerIsNeitherPayeeOrPayee() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         // confirmByBoth(agreementId);
 
         vm.warp(block.timestamp + 2 days);
@@ -544,7 +549,7 @@ contract EscrowTest is Test {
     }
 
     function test_resolveDispute_stateChangesToCompleted() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         // confirmByBoth(agreementId);
 
         vm.warp(block.timestamp + 2 days);
@@ -559,7 +564,7 @@ contract EscrowTest is Test {
     }
 
     function test_resolveDispute_eventHappened() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
         // confirmByBoth(agreementId);
 
         vm.warp(block.timestamp + 2 days);
@@ -568,14 +573,14 @@ contract EscrowTest is Test {
         escrow.raiseDispute(agreementId);
 
         vm.expectEmit(true, true, false, true);
-        emit Escrow.arbiterReleasesFunds(agreementId, 0.1 ether);
+        emit Escrow.ArbiterReleasesFunds(agreementId, 0.1 ether);
 
         vm.prank(arbiter);
         escrow.resolveDispute(agreementId, payee);
     }
 
     function test_resolveDispute_transferFunds() public {
-        uint256 agreementId = createTestAgreement(payer, payee, arbiter, 0.1 ether, block.timestamp + 1 days);
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
 
         // confirmByBoth(agreementId);
         vm.warp(block.timestamp + 2 days);
@@ -588,5 +593,102 @@ contract EscrowTest is Test {
 
         assertEq(payee.balance, 0.1 ether);
         assertEq(address(escrow).balance, 0);
+    }
+
+    // Group: cancelExpiredAgreement
+    function test_RevertWhen_cancellationInWrongState() public {
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
+
+        confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp + 2 days);
+        vm.prank(payee);
+        escrow.releaseFunds(agreementId);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidStateForCancel.selector, "Agreement can only be cancelled when it is in Funded state."
+            )
+        );
+
+        address randomCaller = makeAddr("randomCaller");
+        vm.prank(randomCaller);
+
+        escrow.cancelExpiredAgreement(agreementId);
+    }
+
+    function test_RevertWhen_deadlineIsnotPass() public {
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
+        vm.warp(block.timestamp);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.CancelTooEarly.selector, "Agreement can only be cancelled when the deadline passed."
+            )
+        );
+        address randomCaller = makeAddr("randomCaller");
+        vm.prank(randomCaller);
+
+        escrow.cancelExpiredAgreement(agreementId);
+    }
+
+    function test_RevertWhen_onePartiesHaveConfirmed() public {
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
+
+        // confirmByBoth(agreementId);
+        confirmByPayee(agreementId);
+
+        vm.warp(block.timestamp + 2 days);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.AlreadyConfirmed.selector,
+                address(0),
+                "Agreement can not be cancelled when parties have confirmed."
+            )
+        );
+
+        address randomCaller = makeAddr("randomCaller");
+        vm.prank(randomCaller);
+
+        escrow.cancelExpiredAgreement(agreementId);
+    }
+
+    function test_cancelExpiredAgreement_stateChangesToCanceled() public {
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
+
+        vm.warp(block.timestamp + 2 days);
+
+        address randomCaller = makeAddr("randomCaller");
+        vm.prank(randomCaller);
+
+        escrow.cancelExpiredAgreement(agreementId);
+
+        assertEq(uint8(escrow.getAgreements(agreementId).currentState), uint8(Escrow.State.Canceled));
+    }
+
+    function test_cancelExpiredAgreement_eventHappened() public {
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
+
+        vm.warp(block.timestamp + 2 days);
+        address randomCaller = makeAddr("randomCaller");
+
+        vm.expectEmit(true, true, false, true);
+        emit Escrow.AgreementCanceled(agreementId, randomCaller);
+        vm.prank(randomCaller);
+
+        escrow.cancelExpiredAgreement(agreementId);
+    }
+
+    function test_cancelExpiredAgreement_transferFunds() public {
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
+        assertEq(payer.balance, 0.9 ether);
+
+        vm.warp(block.timestamp + 2 days);
+
+        address randomCaller = makeAddr("randomCaller");
+        vm.prank(randomCaller);
+
+        escrow.cancelExpiredAgreement(agreementId);
+
+        assertEq(payer.balance, 1 ether);
     }
 }

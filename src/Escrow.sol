@@ -17,15 +17,19 @@ contract Escrow is ReentrancyGuard {
     error DisputeTooEarly(string message);
     error InvalidStateForDispute(string message);
     error InvalidStateForResolve(string message);
+    error InvalidStateForCancel(string message);
+    error CancelTooEarly(string message);
 
     event NewAgreement(uint256 indexed agreementId, address payerAddress, uint256 amount);
-    event payeeConfirmedTheAgreement(uint256 indexed agreementId, address payeeAddress);
-    event payerConfirmedTheAgreement(uint256 indexed agreementId, address payerAddress);
-    event payeeReleasesFunds(uint256 indexed agreementId, uint256 amount);
+    event PayeeConfirmedTheAgreement(uint256 indexed agreementId, address payeeAddress);
+    event PayerConfirmedTheAgreement(uint256 indexed agreementId, address payerAddress);
+    event PayeeReleasesFunds(uint256 indexed agreementId, uint256 amount);
 
-    event disputeRaised(uint256 indexed agreementId, address raiser);
+    event DisputeRaised(uint256 indexed agreementId, address raiser);
 
-    event arbiterReleasesFunds(uint256 indexed agreementId, uint256 amount);
+    event ArbiterReleasesFunds(uint256 indexed agreementId, uint256 amount);
+
+    event AgreementCanceled(uint256 indexed agreementId, address by);
 
     uint256 public nextAgreementId = 0;
 
@@ -83,7 +87,7 @@ contract Escrow is ReentrancyGuard {
             revert InvalidDeadline(block.timestamp, "The agreement deadline has already expired");
         }
         currentAgreement.payeeConfirmed = true;
-        emit payeeConfirmedTheAgreement(_agreementId, msg.sender);
+        emit PayeeConfirmedTheAgreement(_agreementId, msg.sender);
     }
 
     function payerRequestCompletion(uint256 _agreementId) public {
@@ -100,7 +104,7 @@ contract Escrow is ReentrancyGuard {
             revert InvalidTimeForPayerToConfirm(msg.sender, "The Payee of the agreement should confirm first");
         }
         currentAgreement.payerConfirmed = true;
-        emit payerConfirmedTheAgreement(_agreementId, msg.sender);
+        emit PayerConfirmedTheAgreement(_agreementId, msg.sender);
     }
 
     function releaseFunds(uint256 _agreementId) public nonReentrant {
@@ -117,7 +121,7 @@ contract Escrow is ReentrancyGuard {
         }
         currentAgreement.currentState = State.Completed;
 
-        emit payeeReleasesFunds(_agreementId, currentAgreement.amount);
+        emit PayeeReleasesFunds(_agreementId, currentAgreement.amount);
         currentAgreement.payee.transfer(currentAgreement.amount);
     }
 
@@ -138,7 +142,7 @@ contract Escrow is ReentrancyGuard {
         }
         currentAgreement.currentState = State.InDispute;
 
-        emit disputeRaised(_agreementId, msg.sender);
+        emit DisputeRaised(_agreementId, msg.sender);
         /**
          * Dispute:
          */
@@ -160,9 +164,27 @@ contract Escrow is ReentrancyGuard {
             revert InvalidWinnerAddress(winner, "Winner address is not payer or payee of the agreement.");
         }
         currentAgreement.currentState = State.Completed;
-        emit arbiterReleasesFunds(_agreementId, currentAgreement.amount);
+        emit ArbiterReleasesFunds(_agreementId, currentAgreement.amount);
 
         payable(winner).transfer(currentAgreement.amount);
+    }
+
+    function cancelExpiredAgreement(uint256 _agreementId) public nonReentrant {
+        Agreement storage currentAgreement = agreements[_agreementId];
+
+        if (currentAgreement.currentState != State.Funded) {
+            revert InvalidStateForCancel("Agreement can only be cancelled when it is in Funded state.");
+        }
+        if (currentAgreement.deadline > block.timestamp) {
+            revert CancelTooEarly("Agreement can only be cancelled when the deadline passed.");
+        }
+        if (currentAgreement.payeeConfirmed || currentAgreement.payerConfirmed) {
+            revert AlreadyConfirmed(address(0), "Agreement can not be cancelled when parties have confirmed.");
+        }
+        currentAgreement.currentState = State.Canceled;
+        emit AgreementCanceled(_agreementId, msg.sender);
+
+        currentAgreement.payer.transfer(currentAgreement.amount);
     }
 
     function getAgreements(uint256 _agreementId) external view returns (Agreement memory) {
