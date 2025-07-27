@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Escrow} from "../src/Escrow.sol";
+import {Escrow} from "../../src/Escrow.sol";
 
 contract EscrowTest is Test {
     Escrow public escrow;
