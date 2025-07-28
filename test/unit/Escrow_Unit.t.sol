@@ -422,6 +422,21 @@ contract EscrowTest is Test {
         escrow.raiseDispute(agreementId);
     }
 
+    function test_RevertWhen_bothPayeeAndPayerHaveNotConfirmed() public {
+        uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
+        // confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp + 2 days);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidStateForDispute.selector,
+                "Dispute not allowed when no confirmations have been made. Use cancelExpiredAgreement instead."
+            )
+        );
+        vm.prank(payer);
+        escrow.raiseDispute(agreementId);
+    }
+
     function test_RevertWhen_disputeRaisedInWrongState() public {
         // uint256 agreementId = createTestAgreement(
         //     block.timestamp + 1 days
@@ -444,7 +459,9 @@ contract EscrowTest is Test {
 
     function test_raiseDispute_eventHappened() public {
         uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
-        // confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp);
+        confirmByPayee(agreementId);
 
         vm.warp(block.timestamp + 2 days);
 
@@ -457,7 +474,9 @@ contract EscrowTest is Test {
 
     function test_raiseDispute_stateChangesToInDispute() public {
         uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
-        // confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp);
+        confirmByPayee(agreementId);
 
         vm.warp(block.timestamp + 2 days);
 
@@ -470,10 +489,11 @@ contract EscrowTest is Test {
     // Group: resolveDispute
     function test_RevertWhen_arbiterDidNotResolveDispute() public {
         uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
-        // confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp);
+        confirmByPayee(agreementId);
 
         vm.warp(block.timestamp + 2 days);
-
         vm.prank(payer);
         escrow.raiseDispute(agreementId);
 
@@ -529,10 +549,11 @@ contract EscrowTest is Test {
 
     function test_RevertWhen_winnerIsNeitherPayeeOrPayee() public {
         uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
-        // confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp);
+        confirmByPayee(agreementId);
 
         vm.warp(block.timestamp + 2 days);
-
         vm.prank(payer);
         escrow.raiseDispute(agreementId);
 
@@ -550,7 +571,9 @@ contract EscrowTest is Test {
 
     function test_resolveDispute_stateChangesToCompleted() public {
         uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
-        // confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp);
+        confirmByPayee(agreementId);
 
         vm.warp(block.timestamp + 2 days);
 
@@ -565,7 +588,9 @@ contract EscrowTest is Test {
 
     function test_resolveDispute_eventHappened() public {
         uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
-        // confirmByBoth(agreementId);
+
+        vm.warp(block.timestamp);
+        confirmByPayee(agreementId);
 
         vm.warp(block.timestamp + 2 days);
 
@@ -582,7 +607,9 @@ contract EscrowTest is Test {
     function test_resolveDispute_transferFunds() public {
         uint256 agreementId = createTestAgreement(block.timestamp + 1 days);
 
-        // confirmByBoth(agreementId);
+        vm.warp(block.timestamp);
+        confirmByPayee(agreementId);
+
         vm.warp(block.timestamp + 2 days);
 
         vm.prank(payer);

@@ -137,6 +137,11 @@ contract Escrow is ReentrancyGuard {
         if (currentAgreement.payeeConfirmed && currentAgreement.payerConfirmed) {
             revert InvalidStateForDispute("Cannot raise a dispute when both parties have confirmed.");
         }
+        if (!currentAgreement.payeeConfirmed && !currentAgreement.payerConfirmed) {
+            revert InvalidStateForDispute(
+                "Dispute not allowed when no confirmations have been made. Use cancelExpiredAgreement instead."
+            );
+        }
         if (currentAgreement.currentState != State.Funded) {
             revert InvalidStateForDispute("Dispute can only be raised when agreement is in Funded state.");
         }
