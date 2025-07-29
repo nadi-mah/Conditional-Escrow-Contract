@@ -216,6 +216,7 @@ contract Escrow is ReentrancyGuard {
             revert ExtensionNotAllowed("Cannot extend deadline after payee has confirmed.");
         }
         if (currentAgreement.currentState != State.Funded) {
+            // only needed when agreement has been canceled
             revert InvalidStateForExtension("Deadline can only be extended when agreement is in funded state.");
         }
         currentAgreement.deadline = _newDeadline;

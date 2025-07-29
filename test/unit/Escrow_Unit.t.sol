@@ -718,4 +718,107 @@ contract EscrowTest is Test {
 
         assertEq(payer.balance, 1 ether);
     }
+    // Group: extendDeadline
+
+    function test_RevertWhen_newDeadlineIsBeforeCurrentDeadline() public {
+        uint256 agreementId = createTestAgreement(2_000_000);
+
+        vm.warp(1_500_000);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidDeadline.selector,
+                block.timestamp,
+                "New deadline must be greater than the current deadline and a future timestamp."
+            )
+        );
+        vm.prank(payer);
+        escrow.extendDeadline(agreementId, block.timestamp);
+    }
+
+    function test_RevertWhen_newDeadlineIsExpired() public {
+        uint256 agreementId = createTestAgreement(1_000_000);
+
+        uint256 invalidNewDeadline = 1_500_000;
+        vm.warp(2_000_000);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidDeadline.selector,
+                invalidNewDeadline,
+                "New deadline must be greater than the current deadline and a future timestamp."
+            )
+        );
+
+        vm.prank(payer);
+        escrow.extendDeadline(agreementId, invalidNewDeadline);
+    }
+
+    function test_RevertWhen_nonPayerTryToExtendDeadline() public {
+        uint256 agreementId = createTestAgreement(1_000_000);
+
+        address fakePayer = makeAddr("fakePayer");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidPayerAddress.selector, fakePayer, "msg.sender is not the payer of the agreement."
+            )
+        );
+        vm.prank(fakePayer);
+        escrow.extendDeadline(agreementId, 2_000_000);
+    }
+
+    function test_RevertWhen_payerTryToExtendDeadlineAfterPayeeRequestCompletion() public {
+        uint256 agreementId = createTestAgreement(1_000_000);
+
+        confirmByPayee(agreementId);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.ExtensionNotAllowed.selector, "Cannot extend deadline after payee has confirmed."
+            )
+        );
+
+        vm.prank(payer);
+        escrow.extendDeadline(agreementId, 2_000_000);
+    }
+
+    function test_RevertWhen_ExtentionWhenAgreementIsInCanceledState() public {
+        uint256 agreementId = createTestAgreement(1_000_000);
+
+        vm.warp(2_000_000);
+        vm.prank(payer);
+        escrow.cancelExpiredAgreement(agreementId);
+        vm.stopPrank();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Escrow.InvalidStateForExtension.selector,
+                "Deadline can only be extended when agreement is in funded state."
+            )
+        );
+        vm.prank(payer);
+        escrow.extendDeadline(agreementId, 2_000_000);
+    }
+
+    function test_extendDeadline_DeadlineUpdated() public {
+        uint256 currentDeadline = 1_000_000;
+        uint256 agreementId = createTestAgreement(currentDeadline);
+
+        assertEq(escrow.getAgreements(agreementId).deadline, currentDeadline);
+        uint256 newDeadline = 2_000_000;
+
+        vm.prank(payer);
+        escrow.extendDeadline(agreementId, newDeadline);
+
+        assertEq(escrow.getAgreements(agreementId).deadline, newDeadline);
+    }
+
+    function test_extendDeadline_UpdateDeadlineHappened() public {
+        uint256 currentDeadline = 1_000_000;
+        uint256 agreementId = createTestAgreement(currentDeadline);
+
+        uint256 newDeadline = 2_000_000;
+
+        vm.expectEmit(true, true, false, true);
+        emit Escrow.ExtendAgreementDeadline(agreementId, newDeadline);
+        vm.prank(payer);
+        escrow.extendDeadline(agreementId, newDeadline);
+    }
 }
