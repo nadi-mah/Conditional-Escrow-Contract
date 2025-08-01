@@ -2,8 +2,10 @@
 pragma solidity ^0.8.13;
 
 import "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
 
-contract Escrow is ReentrancyGuard {
+contract Escrow is ReentrancyGuard, Ownable, Pausable {
     error InvalidDeadline(uint256 time, string message);
     error InvalidAmount(uint256 amount, string message);
     error InvalidPayeeAddress(address payee, string message);
@@ -56,7 +58,33 @@ contract Escrow is ReentrancyGuard {
         bool payerConfirmed;
         bool payeeConfirmed;
     }
+    /**
+     * @title Conditional Escrow Contract
+     * @author https://github.com/nadi-mah
+     * @notice Allows two parties to create an agreement with a third-party arbiter and conditional fund release
+     */
 
+    /**
+     * @notice Initializes the escrow contract and sets the owner
+     * @param escrowOwner The address of the initial owner
+     */
+    constructor(address escrowOwner) Ownable(escrowOwner) {}
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function inpasue() public onlyOwner {
+        _unpause();
+    }
+
+    /**
+     * @notice Creates a new escrow agreement between payer and payee
+     * @dev Only the payer can call this function and must send ether with it. The agreement starts in Funded state.
+     * @param _payee The recipient of the funds if agreement completes
+     * @param _arbiter The address that resolves disputes
+     * @param _deadline Unix timestamp representing the deadline
+     */
     function createAgreement(address _payee, address _arbiter, uint256 _deadline) public payable {
         if (_deadline < block.timestamp) {
             revert InvalidDeadline(_deadline, "Deadline should be time in future");
@@ -76,6 +104,11 @@ contract Escrow is ReentrancyGuard {
         nextAgreementId++;
         emit NewAgreement(agreementId, msg.sender, msg.value);
     }
+    /**
+     * @notice Payee requests completion after delivering the work
+     * @dev Must be called before the deadline. Only the payee can call this.
+     * @param _agreementId The target agreement ID
+     */
 
     function payeeRequestCompletion(uint256 _agreementId) public {
         Agreement storage currentAgreement = agreements[_agreementId];
@@ -93,6 +126,11 @@ contract Escrow is ReentrancyGuard {
         currentAgreement.payeeConfirmed = true;
         emit PayeeConfirmedTheAgreement(_agreementId, msg.sender);
     }
+    /**
+     * @notice Payer confirms the work and requests completion
+     * @dev Only callable after payee has confirmed. Only the payer can call this.
+     * @param _agreementId The target agreement ID
+     */
 
     function payerRequestCompletion(uint256 _agreementId) public {
         Agreement storage currentAgreement = agreements[_agreementId];
@@ -110,6 +148,11 @@ contract Escrow is ReentrancyGuard {
         currentAgreement.payerConfirmed = true;
         emit PayerConfirmedTheAgreement(_agreementId, msg.sender);
     }
+    /**
+     * @notice Payee releases funds after mutual confirmation
+     * @dev Requires both payer and payee to have confirmed. Only payee can call. Prevents reentrancy.
+     * @param _agreementId The target agreement ID
+     */
 
     function releaseFunds(uint256 _agreementId) public nonReentrant {
         Agreement storage currentAgreement = agreements[_agreementId];
@@ -128,6 +171,11 @@ contract Escrow is ReentrancyGuard {
         emit PayeeReleasesFunds(_agreementId, currentAgreement.amount);
         currentAgreement.payee.transfer(currentAgreement.amount);
     }
+    /**
+     * @notice Either party can raise a dispute after the deadline if confirmations are not aligned
+     * @dev Dispute cannot be raised if both have confirmed, or neither has. Must be in Funded state.
+     * @param _agreementId The target agreement ID
+     */
 
     function raiseDispute(uint256 _agreementId) public {
         Agreement storage currentAgreement = agreements[_agreementId];
@@ -159,6 +207,12 @@ contract Escrow is ReentrancyGuard {
         // payee: notConfirmed / payer: notConfirmed => payee did not do the work => transfer money to payer
         // payee: confirmed / payer: notConfirmed => payer fo not want money to transfer => arbiter act
     }
+    /**
+     * @notice Arbiter resolves a dispute by selecting the winner
+     * @dev Can only be called when agreement is in InDispute state. Winner must be either payer or payee.
+     * @param _agreementId The target agreement ID
+     * @param winner The selected address (payer or payee) who receives the funds
+     */
 
     function resolveDispute(uint256 _agreementId, address winner) public nonReentrant {
         Agreement storage currentAgreement = agreements[_agreementId];
@@ -177,6 +231,11 @@ contract Escrow is ReentrancyGuard {
 
         payable(winner).transfer(currentAgreement.amount);
     }
+    /**
+     * @notice Cancels an expired agreement and returns funds to payer
+     * @dev  Only allowed after deadline and when no party has confirmed. Callable by anyone
+     * @param _agreementId The target agreement ID
+     */
 
     function cancelExpiredAgreement(uint256 _agreementId) public nonReentrant {
         Agreement storage currentAgreement = agreements[_agreementId];
@@ -195,6 +254,12 @@ contract Escrow is ReentrancyGuard {
 
         currentAgreement.payer.transfer(currentAgreement.amount);
     }
+    /**
+     * @notice Payer can extend the deadline before payee confirmation
+     * @dev Only callable by payer, and only if agreement is in Funded state and payee has not confirmed
+     * @param _agreementId The target agreement ID
+     * @param _newDeadline  New future timestamp greater than current deadline
+     */
 
     function extendDeadline(uint256 _agreementId, uint256 _newDeadline) public {
         /**
@@ -222,10 +287,19 @@ contract Escrow is ReentrancyGuard {
         currentAgreement.deadline = _newDeadline;
         emit ExtendAgreementDeadline(_agreementId, _newDeadline);
     }
+    /**
+     * @notice Returns details of a specific agreement
+     * @param _agreementId The target agreement ID
+     * @return Agreement struct including payer, payee, arbiter, amount, deadline, etc
+     */
 
     function getAgreements(uint256 _agreementId) external view returns (Agreement memory) {
         return (agreements[_agreementId]);
     }
+    /**
+     * @notice Returns the current total balance held by the escrow contract
+     * @return uint256 Total balance in wei
+     */
 
     function getEscrowBalance() external view returns (uint256) {
         return (address(this).balance);

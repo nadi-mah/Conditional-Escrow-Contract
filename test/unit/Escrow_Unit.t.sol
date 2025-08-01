@@ -10,9 +10,11 @@ contract EscrowTest is Test {
     address public payer;
     address public payee;
     address public arbiter;
+    address public owner;
 
     function setUp() public {
-        escrow = new Escrow();
+        owner = makeAddr("owner");
+        escrow = new Escrow(owner);
 
         arbiter = makeAddr("arbiter");
         payee = makeAddr("payee");
