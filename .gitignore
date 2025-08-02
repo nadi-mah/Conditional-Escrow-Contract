@@ -10,3 +10,11 @@ out/
 
 # Dotenv file
 .env
+
+# Foundry build/cache files
+/contracts/out/
+/contracts/cache/
+/contracts/broadcast/
+
+/contracts/lib/
+/contracts/.forge-install.lock
