@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
+import "contracts/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import "contracts/lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "contracts/lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
 
 contract Escrow is ReentrancyGuard, Ownable, Pausable {
     error InvalidDeadline(uint256 time, string message);
