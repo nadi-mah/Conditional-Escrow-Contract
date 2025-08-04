@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
+    branches:
+      - contracts
   pull_request:
-  workflow_dispatch:
+    branches:
+      - contracts
 
 env:
   FOUNDRY_PROFILE: ci
