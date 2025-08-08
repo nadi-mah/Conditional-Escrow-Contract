@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Label } from './ui/label';
+import { Button } from '../components/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
+import { Badge } from '../components/Badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/Dialog';
+import { Label } from '../components/Label';
 import { Eye, Clock, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 // Mock data for payee agreements (received agreements)

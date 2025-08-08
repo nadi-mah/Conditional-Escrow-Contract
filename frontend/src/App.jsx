@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-
+import './styles/globals.css';
+import './index.css';
 import { PayerDashboard } from './pages/PayerDashboard';
-// import { PayeeDashboard } from './pages/PayeeDashboard';
-// import { ArbiterDashboard } from './pages/ArbiterDashboard';
+import { PayeeDashboard } from './pages/PayeeDashboard';
+import { ArbiterDashboard } from './pages/ArbiterDashboard';
 
 function Sidebar() {
   const location = useLocation();
@@ -17,7 +18,7 @@ function Sidebar() {
     <div className="w-64 bg-card border-r border-border h-screen p-6">
       <div className="mb-8">
         <h1 className="text-lg font-medium">Web3 Agreements</h1>
-        <p className="text-sm text-muted-foreground mt-1">Decentralized Payment Platform</p>
+        <p className="text-sm text-muted-foreground mt-1">Decentralized Conditional Escrow</p>
       </div>
 
       <nav className="space-y-2">
@@ -45,9 +46,9 @@ function AppContent() {
       <main className="flex-1 overflow-auto">
         <Routes>
           <Route path="/" element={<PayerDashboard />} />
-          {/* <Route path="/payer" element={<PayerDashboard />} /> */}
-          {/* <Route path="/payee" element={<PayeeDashboard />} /> */}
-          {/* <Route path="/arbiter" element={<ArbiterDashboard />} /> */}
+          <Route path="/payer" element={<PayerDashboard />} />
+          <Route path="/payee" element={<PayeeDashboard />} />
+          <Route path="/arbiter" element={<ArbiterDashboard />} />
         </Routes>
       </main>
     </div>

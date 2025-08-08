@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import { cn } from "../utils/utils";
 
 function Input({ className, type, ...props }) {
