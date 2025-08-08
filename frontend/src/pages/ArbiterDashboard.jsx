@@ -114,12 +114,12 @@ function AgreementDetailsModal({ agreement }) {
                         <p className="mt-1">{new Date(agreement.deadline).toLocaleString()}</p>
                     </div>
 
-                    {agreement.disputeReason && (
+                    {/* {agreement.disputeReason && (
                         <div>
                             <Label>Dispute Reason</Label>
                             <p className="mt-1 p-3 bg-muted rounded-md">{agreement.disputeReason}</p>
                         </div>
-                    )}
+                    )} */}
 
                     {agreement.status === 'InDispute' && (
                         <div className="space-y-4 pt-4 border-t">

@@ -86,7 +86,7 @@ function CreateAgreementModal() {
                     <DialogTitle>Create New Agreement</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
+                    <div className='flex flex-col gap-1.5'>
                         <Label htmlFor="payeeAddress">Payee Address</Label>
                         <Input
                             id="payeeAddress"
@@ -97,7 +97,7 @@ function CreateAgreementModal() {
                             required
                         />
                     </div>
-                    <div>
+                    <div className='flex flex-col gap-1.5'>
                         <Label htmlFor="arbiterAddress">Arbiter Address</Label>
                         <Input
                             id="arbiterAddress"
@@ -108,7 +108,7 @@ function CreateAgreementModal() {
                             required
                         />
                     </div>
-                    <div>
+                    <div className='flex flex-col gap-1.5'>
                         <Label htmlFor="amount">Amount (ETH)</Label>
                         <Input
                             id="amount"
@@ -120,7 +120,7 @@ function CreateAgreementModal() {
                             required
                         />
                     </div>
-                    <div>
+                    <div className='flex flex-col gap-1.5'>
                         <Label htmlFor="deadline">Deadline</Label>
                         <Input
                             id="deadline"

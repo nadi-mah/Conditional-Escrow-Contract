@@ -15,7 +15,7 @@ function Sidebar() {
   ];
 
   return (
-    <div className="w-64 bg-card border-r border-border h-screen p-6">
+    <div className="w-64 bg-background border-r border-border h-screen p-6">
       <div className="mb-8">
         <h1 className="text-lg font-medium">Web3 Agreements</h1>
         <p className="text-sm text-muted-foreground mt-1">Decentralized Conditional Escrow</p>
