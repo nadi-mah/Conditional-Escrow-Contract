@@ -15,18 +15,19 @@ datasource db {
 }
 
 model Agreement {
-  id Int @id @default(autoincrement())
-  onChainId BigInt
-  title String
-  detail String
+  id Int @id @default(autoincrement()) 
+  onChainId BigInt @unique
+  title String?
+  detail String?
   payer String
   payee String
   arbiter String
   amount Decimal
   deadline DateTime
   currentState AgreementState
-  payerConfirmed Boolean
-  payeeConfirmed Boolean
+  payerConfirmed Boolean @default(false)
+  payeeConfirmed Boolean @default(false)
+  disputeWinner String?
   createdAt DateTime @default(now())
 }
 

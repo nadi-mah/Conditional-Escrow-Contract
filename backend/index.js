@@ -24,4 +24,17 @@ app.get('/agreements', async (req, res) => {
     res.json(agreements);
 });
 
+app.delete('/agreements/:id', async (req, res) => {
+    try {
+        await prisma.agreement.delete({
+            where: { id: parseInt(req.params.id) }
+        });
+        res.json({ message: "Agreement deleted successfully" })
+
+    } catch (error) {
+        res.status(500).json({ errorMessage: error })
+    }
+
+})
+
 app.listen(3000, () => console.log('Server running on port 3000'));
