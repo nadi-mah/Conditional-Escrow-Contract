@@ -4,4 +4,4 @@ const router = express.Router();
 
 router.route('/createAgreement').post(postAgreement);
 
-module.express = router;
+module.exports = router;

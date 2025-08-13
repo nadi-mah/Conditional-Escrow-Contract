@@ -1,10 +1,26 @@
 const validAddress = (address, role) => {
-    if (address === "0x0" || !address || !/^0x[a-fA-F0-9]{3}$/.test(address)) {
-        return { status: false, message: `Invalid ${role} address.` };
+    const zeroAddress = "0x0";
+    const isValid = /^0x[a-fA-F0-9]{3}$/.test(address) && address !== zeroAddress;
 
-    } else {
-        return { status: true, message: "" };
+    return {
+        status: isValid,
+        message: isValid ? "" : `Invalid ${role} address.`
+    };
+}
+const validAmount = (amount) => {
+    const minAmount = 0;
+    const isValid = amount > minAmount;
+
+    return {
+        status: isValid,
+        message: isValid ? "" : `Invalid amount, entered amount should be higher that ${minAmount} eth.`
     }
 }
 
-module.exports = { validAddress }
+const validDeadline = (date) => {
+
+}
+
+module.exports = { validAddress, validAmount, validDeadline }
+
+

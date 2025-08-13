@@ -15,7 +15,7 @@ BigInt.prototype.toJSON = function () {
 };
 
 app.use("/agreements", getAgreementsRouter);
-// app.use("/agreements", postAgreementRouter);
+app.use("/agreements", postAgreementRouter);
 
 // app.post('/agreements', async (req, res) => {
 //     const { onChainId, title, detail, payer, payee, arbiter, amount, deadline, currentState, payerConfirmed, payeeConfirmed } = req.body;
