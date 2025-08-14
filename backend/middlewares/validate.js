@@ -21,6 +21,25 @@ const validDeadline = (date) => {
 
 }
 
-module.exports = { validAddress, validAmount, validDeadline }
+const validPayer = () => {
+
+}
+
+const validPayee = () => {
+
+}
+
+const validArbiter = () => {
+
+}
+
+module.exports = {
+    validAddress,
+    validAmount,
+    validDeadline,
+    validPayer,
+    validPayee,
+    validArbiter
+}
 
 

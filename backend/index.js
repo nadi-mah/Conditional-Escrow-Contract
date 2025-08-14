@@ -11,15 +11,16 @@ const getAgreementsRouter = require("./routes/getAgreementsList.route");
 const postAgreementRouter = require("./routes/createAgreement.route");
 const getAgreementDetailRouter = require("./routes/getAgreementDetail.route");
 const putRequestCompletionRouter = require("./routes/requestCompletion.route");
+const putRequestDisputeRouter = require("./routes/raiseDispute.route");
+const putAgreementEditRouter = require("./routes/putAgreementEdit.route");
 
-BigInt.prototype.toJSON = function () {
-    return this.toString();
-};
 
 app.use("/agreements", getAgreementsRouter);
 app.use("/agreements", postAgreementRouter);
 app.use("/agreements", getAgreementDetailRouter);
 app.use("/agreements", putRequestCompletionRouter);
+app.use("/agreements", putRequestDisputeRouter);
+app.use("/agreements", putAgreementEditRouter);
 
 // app.post('/agreements', async (req, res) => {
 //     const { onChainId, title, detail, payer, payee, arbiter, amount, deadline, currentState, payerConfirmed, payeeConfirmed } = req.body;

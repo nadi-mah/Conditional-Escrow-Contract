@@ -1,7 +1,7 @@
 const { PrismaClient } = require("../generated/prisma")
 const { StatusCodes } = require("http-status-codes");
 
-const { validAddress, validAmount, validDeadline } = require("../middlewares/validate");
+const { validAddress, validAmount, validDeadline, validPayer } = require("../middlewares/validate");
 
 const prisma = new PrismaClient();
 

@@ -1,10 +1,15 @@
 const { PrismaClient } = require("../generated/prisma")
 const { StatusCodes } = require("http-status-codes");
 
+const { validPayer, validPayee } = require("../middlewares/validate");
+
 const prisma = new PrismaClient();
+
 
 const putPayerCompletionRequest = async (req, res) => {
     const agreementId = parseInt(req.params.agreementId);
+    // payer validation
+
     try {
         await prisma.agreement.update({
             where: { id: agreementId },
@@ -20,6 +25,8 @@ const putPayerCompletionRequest = async (req, res) => {
 
 const putPayeeCompletionRequest = async (req, res) => {
     const agreementId = parseInt(req.params.agreementId);
+    // payee validation
+
     try {
         await prisma.agreement.update({
             where: { id: agreementId },

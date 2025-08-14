@@ -1,6 +1,8 @@
 const { PrismaClient } = require("../generated/prisma")
 const { StatusCodes } = require("http-status-codes");
 
+const { validPayer, validPayee } = require("../middlewares/validate");
+
 const prisma = new PrismaClient();
 
 const getAgreementDetail = async (req, res) => {
