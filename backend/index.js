@@ -7,8 +7,10 @@ const prisma = new PrismaClient();
 app.use(express.json());
 
 // Connect Routers
-const getAgreementsRouter = require("./routes/agreementsList.route");
+const getAgreementsRouter = require("./routes/getAgreementsList.route");
 const postAgreementRouter = require("./routes/createAgreement.route");
+const getAgreementDetailRouter = require("./routes/getAgreementDetail.route");
+const putRequestCompletionRouter = require("./routes/requestCompletion.route");
 
 BigInt.prototype.toJSON = function () {
     return this.toString();
@@ -16,6 +18,8 @@ BigInt.prototype.toJSON = function () {
 
 app.use("/agreements", getAgreementsRouter);
 app.use("/agreements", postAgreementRouter);
+app.use("/agreements", getAgreementDetailRouter);
+app.use("/agreements", putRequestCompletionRouter);
 
 // app.post('/agreements', async (req, res) => {
 //     const { onChainId, title, detail, payer, payee, arbiter, amount, deadline, currentState, payerConfirmed, payeeConfirmed } = req.body;

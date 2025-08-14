@@ -1,4 +1,4 @@
-const { getPayerAgreements, getPayeeAgreements, getArbiterAgreements } = require("../controllers/agreementsList.controller");
+const { getPayerAgreements, getPayeeAgreements, getArbiterAgreements } = require("../controllers/getAgreementsList.controller");
 const express = require("express");
 const router = express.Router();
 
