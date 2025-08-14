@@ -1,4 +1,4 @@
-const { putCancelAgreement, putExtendDuration } = require("../controllers/putAgreementEdit.controller");
+const { putCancelAgreement, putExtendDuration } = require("../controllers/updateAgreement.controller");
 const express = require("express");
 const router = express.Router();
 
