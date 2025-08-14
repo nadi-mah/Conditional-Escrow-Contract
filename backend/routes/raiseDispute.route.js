@@ -2,7 +2,7 @@ const { putRaiseDispute, putResolveDispute } = require("../controllers/raiseDisp
 const express = require("express");
 const router = express.Router();
 
-router.route("/disputeRequest/:agreementId").put(putRaiseDispute);
-router.route("/disputeResolve/:agreementId").put(putResolveDispute);
+router.route("/:agreementId/raise-dispute").put(putRaiseDispute);
+router.route("/:agreementId/resolve-dispute").put(putResolveDispute);
 
 module.exports = router;

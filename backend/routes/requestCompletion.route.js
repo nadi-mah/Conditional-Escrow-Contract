@@ -2,7 +2,7 @@ const { putPayerCompletionRequest, putPayeeCompletionRequest } = require("../con
 const express = require("express");
 const router = express.Router();
 
-router.route("/payerConfirm/:agreementId").put(putPayerCompletionRequest);
-router.route("/payeeConfirm/:agreementId").put(putPayeeCompletionRequest);
+router.route("/:agreementId/request-completion-payer").put(putPayerCompletionRequest);
+router.route("/:agreementId/request-completion-payee").put(putPayeeCompletionRequest);
 
 module.exports = router;

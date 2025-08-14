@@ -2,6 +2,6 @@ const { putPayerReleaseFunds } = require("../controllers/releaseFunds.controller
 const express = require("express");
 const router = express.Router();
 
-router.route("/releaseFunds/:agreementId").put(putPayerReleaseFunds);
+router.route("/:agreementId/release-funds").put(putPayerReleaseFunds);
 
 module.exports = router;
