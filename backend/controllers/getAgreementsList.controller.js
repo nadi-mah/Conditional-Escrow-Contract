@@ -82,7 +82,7 @@ const getAgreementsByRole = async (role, address) => {
 
     return prisma.agreement.findMany({
         where: { [role]: address },
-        select: { title: true, amount: true, payer: true, payee: true, deadline: true, currentState: true }
+        select: { id: true, title: true, amount: true, payer: true, payee: true, deadline: true, currentState: true }
     });
 };
 module.exports = { getPayerAgreements, getPayeeAgreements, getArbiterAgreements };
