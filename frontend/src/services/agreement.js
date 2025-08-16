@@ -18,6 +18,9 @@ class AgreementService {
     async updateCancelExpiredAgreement(data) {
         return await AxiosApiService.put(`${data.agreementId}/cancel-expired`)
     }
+    async updateExtendDuration(data) {
+        return await AxiosApiService.put(`${data.agreementId}/extend-duration`, data)
+    }
     async createAgreement(data) {
         return await AxiosApiService.post(`createAgreement`, data)
     }

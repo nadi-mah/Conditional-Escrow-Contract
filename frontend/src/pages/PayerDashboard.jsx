@@ -7,43 +7,11 @@ import { Badge } from '../components/Badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/Dialog';
 import { Input } from '../components/Input';
 import { Label } from '../components/Label';
-import { Plus, Eye, Clock, CheckCircle, AlertTriangle, XCircle, UserCheck, LoaderCircle, LoaderPinwheel } from 'lucide-react';
+import { Plus, Eye, Clock, CheckCircle, AlertTriangle, XCircle, UserCheck, LoaderCircle, LoaderPinwheel, CalendarCheck2, CircleArrowLeft } from 'lucide-react';
 
 // API
 import AgreementService from "../services/agreement";
 
-
-
-
-const mockAgreements = [
-    {
-        id: '1',
-        payeeAddress: '0x742d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        arbiterAddress: '0x8ba1f109551bD432803012645Hac136c6d03b442',
-        amount: '2.5',
-        deadline: '2025-08-15T14:30:00',
-        status: 'Funded',
-        confirmed: false
-    },
-    {
-        id: '2',
-        payeeAddress: '0x123d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        arbiterAddress: '0x456a1f109551bD432803012645Hac136c6d03b442',
-        amount: '1.0',
-        deadline: '2025-08-20T10:00:00',
-        status: 'Completed',
-        confirmed: true
-    },
-    {
-        id: '3',
-        payeeAddress: '0x789d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        arbiterAddress: '0x101f109551bD432803012645Hac136c6d03b442',
-        amount: '0.75',
-        deadline: '2025-08-12T16:45:00',
-        status: 'InDispute',
-        confirmed: false
-    }
-];
 
 function getStatusIcon(status) {
     switch (status) {
@@ -69,7 +37,7 @@ function CreateAgreementModal({ handleDialogClose }) {
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
-        onChainId: "10025",
+        onChainId: 20031,
         title: "",
         payer: "0x123",
         payee: "",
@@ -83,7 +51,7 @@ function CreateAgreementModal({ handleDialogClose }) {
             .then((res) => {
                 console.log(res);
                 setFormData({
-                    onChainId: "10028",
+                    onChainId: 20031,
                     title: "",
                     payer: "0x123",
                     payee: "",
@@ -189,9 +157,13 @@ function CreateAgreementModal({ handleDialogClose }) {
 function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 
     const [agreementDetail, setAgreementDetail] = useState({});
-    const [isDisputeAllowed, setIsDisputeAllowed] = useState(false);
-    const [isCancelAllowed, setIsCancelAllowed] = useState(false);
+
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [newDeadlineInput, setNewDeadlineInput] = useState(false);
+    const [newDeadline, setNewDeadline] = useState(null);
+
+    const [actions, setActions] = useState([]);
+
 
     const getAgreementDetail = async () => {
         const data = {
@@ -226,35 +198,78 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
             .then(() => getAgreementDetail())
             .catch(err => console.error(err));
     }
+    const handleExtendDuration = async () => {
+        if (newDeadline) {
+            const data = {
+                agreementId: agreementId,
+                deadline: new Date(newDeadline)
+            }
+            await AgreementService.updateExtendDuration(data)
+                .then(() => {
+                    getAgreementDetail();
+                    setNewDeadline(null);
+                    setNewDeadlineInput(false);
+
+                })
+                .catch(err => console.error(err));
+        }
+
+    }
+    const getAvailableActions = () => {
+        const actions = []
+        const now = new Date().toLocaleString()
+        const deadline = new Date(agreementDetail.deadline).toLocaleString();
+        const isBeforeDeadline = now < deadline;
+        const isAfterDeadline = now > deadline;
+
+        // 1) Confirm Completion
+        if (
+            agreementDetail.currentState === "Funded" &&
+            isBeforeDeadline &&
+            agreementDetail.payeeConfirmed &&
+            !agreementDetail.payerConfirmed
+        ) {
+            actions.push("confirm");
+        }
+        // 2) Raise Dispute
+        if (
+            isAfterDeadline &&
+            !(agreementDetail.payerConfirmed && agreementDetail.payeeConfirmed) &&
+            !(!agreementDetail.payerConfirmed && !agreementDetail.payeeConfirmed) &&
+            agreementDetail.currentState === "Funded"
+        ) {
+            actions.push("raiseDispute");
+        }
+
+        // 3) Extend Duration
+        if (
+            agreementDetail.currentState === "Funded" &&
+            !agreementDetail.payeeConfirmed
+        ) {
+            actions.push("extendDuration");
+        }
+
+        // 4) Cancel Expired Agreement
+        if (
+            isAfterDeadline &&
+            !agreementDetail.payerConfirmed &&
+            !agreementDetail.payeeConfirmed &&
+            agreementDetail.currentState === "Funded"
+        ) {
+            actions.push("cancelExpired");
+        }
+
+        return actions;
+    }
     const handleDetailModal = () => {
         getAgreementDetail();
     }
-    const handleIsDisputeAllowed = () => {
-        if (new Date().toLocaleString() < new Date(agreementDetail.deadline).toLocaleString()) {
-            setIsDisputeAllowed(false);
-        } else if (!agreementDetail.payerConfirmed && !agreementDetail.payeeConfirmed) {
-            setIsDisputeAllowed(false);
-        } else if (agreementDetail.payerConfirmed && agreementDetail.payeeConfirmed) {
-            setIsDisputeAllowed(false);
-        } else {
-            setIsDisputeAllowed(true);
-        }
-    }
-    const handleIdCancelAllowed = () => {
-        if (new Date().toLocaleString() < new Date(agreementDetail.deadline).toLocaleString()) {
-            setIsCancelAllowed(false);
-        } else if (agreementDetail.payerConfirmed || agreementDetail.payeeConfirmed) {
-            setIsCancelAllowed(false);
-        } else if (agreementDetail.currentState != "Funded") {
-            setIsCancelAllowed(false);
-        } else {
-            setIsCancelAllowed(true);
-        }
-    }
     useEffect(() => {
-        handleIsDisputeAllowed();
-        handleIdCancelAllowed();
+        setActions(getAvailableActions(agreementDetail));
     }, [agreementDetail])
+
+
+
 
     return (
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -329,33 +344,48 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                             </p>
                         </div>
                     }
-
-                    {agreementDetail.currentState === 'Funded' && (
-                        <div className="flex gap-2 pt-4">
-                            {!agreementDetail.payerConfirmed && agreementDetail.payeeConfirmed &&
-                                <Button variant="default" className="flex-1" onClick={() => handleConfirmByPayer()}>
-                                    Confirm Completion
-                                </Button>
-                            }
-                            <Button variant={isDisputeAllowed ? "destructive" : "disabled"} className="flex-1" onClick={() => handleRaiseDispute()}>
+                    <div className="flex gap-2 pt-4 items-end">
+                        {actions.includes("confirm") && (
+                            <Button onClick={handleConfirmByPayer}>Confirm Completion</Button>
+                        )}
+                        {actions.includes("raiseDispute") && (
+                            <Button variant="destructive" onClick={handleRaiseDispute}>
                                 Raise Dispute
                             </Button>
-                        </div>
-                    )}
+                        )}
+                        {actions.includes("extendDuration") ?
+                            newDeadlineInput ?
+                                <div className='flex flex-col gap-1.5'>
+                                    <Label htmlFor="deadline">Deadline</Label>
+                                    <div className="flex items-center gap-1.5">
+                                        <Input
+                                            id="deadline"
+                                            type="datetime-local"
+                                            value={newDeadline}
+                                            onChange={(e) => setNewDeadline(e.target.value)}
+                                            required
+                                        />
+                                        <div className="flex flex-col gap-1.5">
+                                            <CircleArrowLeft className="w-3 h-3 cursor-pointer hover:stroke-orange-400" onClick={() => { setNewDeadlineInput(false) }} />
+                                            <CalendarCheck2 className="w-3 h-3 cursor-pointer hover:stroke-blue-600" onClick={handleExtendDuration} />
 
-                    {isCancelAllowed &&
-                        <div className="flex gap-2">
-                            <Button variant="default" className="flex-1" onClick={() => handleCancelExpiredAgreement()}>
-                                Cancel
+                                        </div>
+                                    </div>
+                                </div>
+                                : (
+                                    <Button onClick={() => setNewDeadlineInput(true)}>Extend Duration</Button>
+                                ) : ""}
+                        {actions.includes("cancelExpired") && (
+                            <Button variant="secondary" onClick={handleCancelExpiredAgreement}>
+                                Cancel Expired Agreement
                             </Button>
-                        </div>
-                    }
-
+                        )}
+                    </div>
                 </div>
-                {!isDisputeAllowed && agreementDetail.currentState === 'Funded' &&
+                {/* {!isDisputeAllowed && agreementDetail.currentState === 'Funded' &&
                     <p className="text-sm mt-1 break-all text-muted-foreground">
                         A dispute can only be raised after the agreement deadline has passed. it cannot be raised if both have confirmed, or neither has.
-                    </p>}
+                    </p>} */}
             </DialogContent>
         </Dialog>
     );
@@ -374,6 +404,7 @@ export function PayerDashboard() {
             .catch(err => console.error(err));
 
     }
+
     useEffect(() => {
         getAgreementsByPayer();
     }, []);
@@ -396,7 +427,7 @@ export function PayerDashboard() {
                         <CardHeader className="pb-3">
                             <div className="flex justify-between items-start">
                                 <CardTitle className="text-base font-semibold">
-                                    {agreement.title || `Agreement #${agreement.id}`}
+                                    {`#${agreement.id} ${agreement.title}` || `Agreement #${agreement.id}`}
                                 </CardTitle>
                                 <div className="flex items-center gap-2">
                                     {getStatusIcon(agreement.currentState)}
