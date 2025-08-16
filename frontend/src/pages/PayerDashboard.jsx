@@ -37,7 +37,7 @@ function CreateAgreementModal({ handleDialogClose }) {
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
-        onChainId: 20031,
+        onChainId: 20037,
         title: "",
         payer: "0x123",
         payee: "",
@@ -51,7 +51,7 @@ function CreateAgreementModal({ handleDialogClose }) {
             .then((res) => {
                 console.log(res);
                 setFormData({
-                    onChainId: 20031,
+                    onChainId: 20037,
                     title: "",
                     payer: "0x123",
                     payee: "",
@@ -394,10 +394,11 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 export function PayerDashboard() {
 
     const [agreements, setAgreements] = useState([]);
+    const payerAddress = "0x123";
 
     const getAgreementsByPayer = async () => {
         const data = {
-            payerAddress: "0x123"
+            payerAddress: payerAddress
         }
         await AgreementService.getAgreementsByPayer(data)
             .then(res => setAgreements(res.data.agreements))
@@ -415,7 +416,10 @@ export function PayerDashboard() {
         <div className="p-8">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1>Payer Dashboard</h1>
+                    <h1 className='flex gap-2 items-end'>
+                        Payer Dashboard
+                        <span className="text-sm font-mono truncate pb-1.5">{payerAddress}</span>
+                    </h1>
                     <p className="text-muted-foreground mt-1">Manage your payment agreements</p>
                 </div>
                 <CreateAgreementModal handleDialogClose={getAgreementsByPayer} />

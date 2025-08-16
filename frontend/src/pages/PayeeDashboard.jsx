@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+// Components 
 import { Button } from '../components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/Dialog';
 import { Label } from '../components/Label';
 import { Eye, Clock, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+
+// API
+import AgreementService from "../services/agreement";
+
 
 // Mock data for payee agreements (received agreements)
 const mockPayeeAgreements = [
@@ -57,11 +63,96 @@ function getStatusColor(status) {
     }
 }
 
-function AgreementDetailsModal({ agreement }) {
+function AgreementDetailsModal({ agreementId, handleDialogClose }) {
+
+    const [agreementDetail, setAgreementDetail] = useState({});
+
+    const [actions, setActions] = useState([]);
+
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const getAgreementDetail = async () => {
+        const data = {
+            agreementId: agreementId
+        }
+        await AgreementService.getAgreementDetail(data)
+            .then(res => setAgreementDetail(res.data.agreement))
+            .catch(err => console.error(err));
+
+    }
+    const handleConfirmByPayee = async () => {
+        const data = {
+            agreementId: agreementId
+        }
+        await AgreementService.updateRequestCompletionPayee(data)
+            .then(() => getAgreementDetail())
+            .catch(err => console.error(err));
+    }
+    const handleRaiseDispute = async () => {
+        const data = {
+            agreementId: agreementId
+        }
+        await AgreementService.updateRaiseDispute(data)
+            .then(() => getAgreementDetail())
+            .catch(err => console.error(err));
+    }
+    const handleReleaseFunds = async () => {
+        const data = {
+            agreementId: agreementId
+        }
+        await AgreementService.updateReleaseFunds(data)
+            .then(() => getAgreementDetail())
+            .catch(err => console.error(err));
+    }
+    const getAvailableActions = () => {
+        const actions = []
+        const now = new Date().toLocaleString()
+        const deadline = new Date(agreementDetail.deadline).toLocaleString();
+        const isBeforeDeadline = now < deadline;
+        const isAfterDeadline = now > deadline;
+
+        // 1) Confirm Completion
+        if (
+            agreementDetail.currentState === "Funded" &&
+            isBeforeDeadline &&
+            !agreementDetail.payeeConfirmed
+        ) {
+            actions.push("confirm");
+        }
+        // 2) Raise Dispute
+        if (
+            isAfterDeadline &&
+            !(agreementDetail.payerConfirmed && agreementDetail.payeeConfirmed) &&
+            !(!agreementDetail.payerConfirmed && !agreementDetail.payeeConfirmed) &&
+            agreementDetail.currentState === "Funded"
+        ) {
+            actions.push("raiseDispute");
+        }
+        // 3) Release Funds
+        if (
+            agreementDetail.payeeConfirmed &&
+            agreementDetail.payerConfirmed &&
+            agreementDetail.currentState === "Funded"
+        ) {
+            actions.push("releaseFunds");
+        }
+
+        return actions;
+    }
+    const handleDetailModal = () => {
+        getAgreementDetail();
+    }
+    useEffect(() => {
+        setActions(getAvailableActions(agreementDetail));
+    }, [agreementDetail])
+
     return (
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) handleDialogClose();
+        }}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => handleDetailModal()}>
                     <Eye className="w-4 h-4" />
                     View Details
                 </Button>
@@ -75,47 +166,56 @@ function AgreementDetailsModal({ agreement }) {
                         <div>
                             <Label>Status</Label>
                             <div className="flex items-center gap-2 mt-1">
-                                {getStatusIcon(agreement.status)}
-                                <Badge className={getStatusColor(agreement.status)}>
-                                    {agreement.status}
+                                {getStatusIcon(agreementDetail.currentState)}
+                                <Badge className={getStatusColor(agreementDetail.currentState)}>
+                                    {agreementDetail.currentState}
                                 </Badge>
                             </div>
                         </div>
                         <div>
                             <Label>Amount</Label>
-                            <p className="mt-1">{agreement.amount} ETH</p>
+                            <p className="mt-1">{agreementDetail.amount} ETH</p>
                         </div>
                     </div>
 
                     <div>
                         <Label>Payer Address</Label>
-                        <p className="text-sm font-mono mt-1 break-all">{agreement.payerAddress}</p>
+                        <p className="text-sm font-mono mt-1 break-all">{agreementDetail.payer}</p>
                     </div>
 
                     <div>
                         <Label>Arbiter Address</Label>
-                        <p className="text-sm font-mono mt-1 break-all">{agreement.arbiterAddress}</p>
+                        <p className="text-sm font-mono mt-1 break-all">{agreementDetail.arbiter}</p>
                     </div>
 
                     <div>
                         <Label>Deadline</Label>
-                        <p className="mt-1">{new Date(agreement.deadline).toLocaleString()}</p>
+                        <p className="mt-1">{new Date(agreementDetail.deadline).toLocaleString()}</p>
                     </div>
 
                     <div>
                         <Label>Confirmation Status</Label>
-                        <p className="mt-1">{agreement.confirmed ? 'Confirmed' : 'Pending Confirmation'}</p>
+                        <p className="mt-1">
+                            {!agreementDetail.payeeConfirmed ? 'Payee Pending Confirmation' :
+                                !agreementDetail.payerConfirmed ? 'Payer Pending Confirmation' :
+                                    agreementDetail.currentState === "Funded" ? "Release Funds Pending" :
+                                        agreementDetail.currentState === "InDispute" ? "Dispute has raised" :
+                                            'Confirmed'}
+                        </p>
                     </div>
-
-                    {agreement.status === 'Funded' && (
-                        <div className="flex gap-2 pt-4">
-                            <Button variant="default" className="flex-1">
-                                Confirm Delivery
-                            </Button>
-                            <Button variant="destructive" className="flex-1">
-                                Raise Dispute
-                            </Button>
-                        </div>
+                    {actions.includes("confirm") && (
+                        <Button variant="default" className="flex-1" onClick={handleConfirmByPayee}>
+                            Confirm Delivery
+                        </Button>)}
+                    {actions.includes("raiseDispute") && (
+                        <Button variant="destructive" className="flex-1" onClick={handleRaiseDispute}>
+                            Raise Dispute
+                        </Button>
+                    )}
+                    {actions.includes("releaseFunds") && (
+                        <Button variant="secondary" className="flex-1" onClick={handleReleaseFunds}>
+                            Release Funds
+                        </Button>
                     )}
                 </div>
             </DialogContent>
@@ -124,27 +224,48 @@ function AgreementDetailsModal({ agreement }) {
 }
 
 export function PayeeDashboard() {
+
+    const [agreements, setAgreements] = useState([]);
+    const payeeAddress = "0x222";
+
+    const getAgreementsByPayee = async () => {
+        const data = {
+            payeeAddress: payeeAddress
+        }
+        await AgreementService.getAgreementsByPayee(data)
+            .then(res => setAgreements(res.data.agreements))
+            .catch(err => console.error(err));
+
+    }
+
+    useEffect(() => {
+        getAgreementsByPayee();
+    }, []);
+
     return (
         <div className="p-8">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1>Payee Dashboard</h1>
+                    <h1 className='flex gap-2 items-end'>
+                        Payee Dashboard
+                        <span className="text-sm font-mono truncate pb-1.5">{payeeAddress}</span>
+                    </h1>
                     <p className="text-muted-foreground mt-1">Track agreements where you're the recipient</p>
                 </div>
             </div>
 
             <div className="grid gap-4">
-                {mockPayeeAgreements.map((agreement) => (
+                {agreements.map((agreement) => (
                     <Card key={agreement.id}>
                         <CardHeader className="pb-3">
                             <div className="flex justify-between items-start">
                                 <CardTitle className="text-base">
-                                    Agreement #{agreement.id}
+                                    {`#${agreement.id} ${agreement.title}` || `Agreement #${agreement.id}`}
                                 </CardTitle>
                                 <div className="flex items-center gap-2">
-                                    {getStatusIcon(agreement.status)}
-                                    <Badge className={getStatusColor(agreement.status)}>
-                                        {agreement.status}
+                                    {getStatusIcon(agreement.currentState)}
+                                    <Badge className={getStatusColor(agreement.currentState)}>
+                                        {agreement.currentState}
                                     </Badge>
                                 </div>
                             </div>
@@ -161,11 +282,11 @@ export function PayeeDashboard() {
                                 </div>
                                 <div>
                                     <Label className="text-sm text-muted-foreground">Payer</Label>
-                                    <p className="text-sm font-mono truncate">{agreement.payerAddress}</p>
+                                    <p className="text-sm font-mono truncate">{agreement.payer}</p>
                                 </div>
                             </div>
                             <div className="flex justify-end">
-                                <AgreementDetailsModal agreement={agreement} />
+                                <AgreementDetailsModal agreementId={agreement.id} handleDialogClose={getAgreementsByPayee} />
                             </div>
                         </CardContent>
                     </Card>

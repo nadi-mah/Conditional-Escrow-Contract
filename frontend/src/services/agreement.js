@@ -5,13 +5,19 @@ class AgreementService {
     async getAgreementsByPayer(data) {
         return await AxiosApiService.get(`payer/${data.payerAddress}`)
     }
-
+    async getAgreementsByPayee(data) {
+        return await AxiosApiService.get(`payee/${data.payeeAddress}`)
+    }
     async getAgreementDetail(data) {
         return await AxiosApiService.get(`detail/${data.agreementId}`)
     }
     async updateRequestCompletionPayer(data) {
         return await AxiosApiService.put(`${data.agreementId}/request-completion-payer`)
     }
+    async updateRequestCompletionPayee(data) {
+        return await AxiosApiService.put(`${data.agreementId}/request-completion-payee`)
+    }
+
     async updateRaiseDispute(data) {
         return await AxiosApiService.put(`${data.agreementId}/raise-dispute`)
     }
@@ -20,6 +26,9 @@ class AgreementService {
     }
     async updateExtendDuration(data) {
         return await AxiosApiService.put(`${data.agreementId}/extend-duration`, data)
+    }
+    async updateReleaseFunds(data) {
+        return await AxiosApiService.put(`${data.agreementId}/release-funds`)
     }
     async createAgreement(data) {
         return await AxiosApiService.post(`createAgreement`, data)
