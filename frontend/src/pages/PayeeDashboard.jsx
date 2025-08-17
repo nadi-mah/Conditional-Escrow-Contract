@@ -259,7 +259,7 @@ export function PayeeDashboard() {
                     <Card key={agreement.id}>
                         <CardHeader className="pb-3">
                             <div className="flex justify-between items-start">
-                                <CardTitle className="text-base">
+                                <CardTitle className="text-base font-semibold">
                                     {`#${agreement.id} ${agreement.title}` || `Agreement #${agreement.id}`}
                                 </CardTitle>
                                 <div className="flex items-center gap-2">
