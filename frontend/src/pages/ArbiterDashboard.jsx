@@ -1,3 +1,7 @@
+// React
+import { useState, useEffect } from 'react';
+
+// Components
 import { Button } from '../components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Badge } from '../components/Badge';
@@ -5,7 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '../components/Label';
 import { Textarea } from '../components/Textarea';
 import { Eye, Clock, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
-import { useState } from 'react';
+
+// API
+import AgreementService from "../services/agreement";
 
 // Mock data for arbiter agreements (where user is arbiter)
 const mockArbiterAgreements = [
@@ -61,69 +67,94 @@ function getStatusColor(status) {
     }
 }
 
-function AgreementDetailsModal({ agreement }) {
+function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     const [resolution, setResolution] = useState('');
+    const [agreementDetail, setAgreementDetail] = useState({});
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+
+    const handleResolveDispute = async (decision) => {
+        const data = {
+            agreementId: agreementId,
+            winner: decision
+        }
+        await AgreementService.updateResolveDispute(data)
+            .then(() => getAgreementDetail())
+            .catch(err => console.error(err))
+
+    }
     const handleResolve = (decision) => {
         console.log(`Resolving in favor of ${decision}:`, resolution);
-        setResolution('');
+        handleResolveDispute(decision);
     };
+    const getAgreementDetail = async () => {
+        const data = {
+            agreementId: agreementId
+        }
+        await AgreementService.getAgreementDetail(data)
+            .then(res => setAgreementDetail(res.data.agreement))
+            .catch(err => console.error(err));
+
+    }
 
     return (
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) handleDialogClose();
+        }}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={getAgreementDetail}>
                     <Eye className="w-4 h-4" />
                     View Details
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Arbitration Case #{agreement.id}</DialogTitle>
+                    <DialogTitle>Arbitration Case #{agreementDetail.id}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Status</Label>
                             <div className="flex items-center gap-2 mt-1">
-                                {getStatusIcon(agreement.status)}
-                                <Badge className={getStatusColor(agreement.status)}>
-                                    {agreement.status}
+                                {getStatusIcon(agreementDetail.currentState)}
+                                <Badge className={getStatusColor(agreementDetail.currentState)}>
+                                    {agreementDetail.currentState}
                                 </Badge>
                             </div>
                         </div>
                         <div>
                             <Label>Amount</Label>
-                            <p className="mt-1">{agreement.amount} ETH</p>
+                            <p className="mt-1">{agreementDetail.amount} ETH</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Payer Address</Label>
-                            <p className="text-sm font-mono mt-1 break-all">{agreement.payerAddress}</p>
+                            <p className="text-sm font-mono mt-1 break-all">{agreementDetail.payer}</p>
                         </div>
                         <div>
                             <Label>Payee Address</Label>
-                            <p className="text-sm font-mono mt-1 break-all">{agreement.payeeAddress}</p>
+                            <p className="text-sm font-mono mt-1 break-all">{agreementDetail.payee}</p>
                         </div>
                     </div>
-
-                    <div>
-                        <Label>Deadline</Label>
-                        <p className="mt-1">{new Date(agreement.deadline).toLocaleString()}</p>
-                    </div>
-
-                    {/* {agreement.disputeReason && (
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label>Dispute Reason</Label>
-                            <p className="mt-1 p-3 bg-muted rounded-md">{agreement.disputeReason}</p>
+                            <Label>Deadline</Label>
+                            <p className="mt-1">{new Date(agreementDetail.deadline).toLocaleString()}</p>
                         </div>
-                    )} */}
-
-                    {agreement.status === 'InDispute' && (
-                        <div className="space-y-4 pt-4 border-t">
+                        {agreementDetail.disputeWinner &&
                             <div>
+                                <Label>Winner</Label>
+                                <p className="mt-1">{agreementDetail.disputeWinner}</p>
+                            </div>}
+                    </div>
+
+
+                    {agreementDetail.currentState === 'InDispute' && (
+                        <div className="space-y-4 pt-4 border-t">
+                            {/* <div>
                                 <Label htmlFor="resolution">Resolution Notes</Label>
                                 <Textarea
                                     id="resolution"
@@ -132,7 +163,7 @@ function AgreementDetailsModal({ agreement }) {
                                     onChange={(e) => setResolution(e.target.value)}
                                     className="mt-1"
                                 />
-                            </div>
+                            </div> */}
                             <div className="flex gap-2">
                                 <Button
                                     variant="default"
@@ -158,13 +189,43 @@ function AgreementDetailsModal({ agreement }) {
 }
 
 export function ArbiterDashboard() {
-    const pendingDisputes = mockArbiterAgreements.filter(a => a.status === 'InDispute');
-    const resolvedCases = mockArbiterAgreements.filter(a => a.status === 'Completed');
+
+    const [agreementsData, setAgreementsData] = useState([]);
+    const [pendingDisputes, setPendingDisputes] = useState([]);
+    const [resolvedCases, setResolvedCases] = useState([]);
+
+    const arbiterAddress = "0x222";
+
+    const getAgreementsByArbiter = async () => {
+        const data = {
+            arbiterAddress: arbiterAddress
+        }
+        await AgreementService.getAgreementsByArbiter(data)
+            .then(res => {
+                setAgreementsData(res.data);
+            })
+            .catch(err => console.error(err));
+
+    }
+
+    useEffect(() => {
+        getAgreementsByArbiter();
+    }, []);
+    useEffect(() => {
+        if (agreementsData?.agreements?.length) {
+            setPendingDisputes(agreementsData?.agreements.filter(a => a.currentState === 'InDispute'));
+            setResolvedCases(agreementsData?.agreements.filter(a => a.currentState === 'Completed' && a.disputeWinner));
+        }
+    }, [agreementsData])
+
 
     return (
         <div className="p-8">
             <div className="mb-8">
-                <h1>Arbiter Dashboard</h1>
+                <h1 className='flex gap-2 items-end'>
+                    Arbiter Dashboard
+                    <span className="text-sm font-mono truncate pb-1.5">{arbiterAddress}</span>
+                </h1>
                 <p className="text-muted-foreground mt-1">Resolve disputes and manage arbitration cases</p>
             </div>
 
@@ -174,7 +235,7 @@ export function ArbiterDashboard() {
                         <CardTitle className="text-sm">Pending Disputes</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-medium">{pendingDisputes.length}</div>
+                        <div className="text-2xl font-medium">{agreementsData.disputeCount}</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -182,7 +243,7 @@ export function ArbiterDashboard() {
                         <CardTitle className="text-sm">Resolved Cases</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-medium">{resolvedCases.length}</div>
+                        <div className="text-2xl font-medium">{agreementsData.resolveCount}</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -190,7 +251,7 @@ export function ArbiterDashboard() {
                         <CardTitle className="text-sm">Total Cases</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-medium">{mockArbiterAgreements.length}</div>
+                        <div className="text-2xl font-medium">{agreementsData.agreements?.length}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -204,13 +265,13 @@ export function ArbiterDashboard() {
                                 <Card key={agreement.id} className="border-yellow-200 bg-yellow-50">
                                     <CardHeader className="pb-3">
                                         <div className="flex justify-between items-start">
-                                            <CardTitle className="text-base">
-                                                Case #{agreement.id}
+                                            <CardTitle className="text-base font-semibold">
+                                                {agreement.title} #{agreement.id}
                                             </CardTitle>
                                             <div className="flex items-center gap-2">
-                                                {getStatusIcon(agreement.status)}
-                                                <Badge className={getStatusColor(agreement.status)}>
-                                                    {agreement.status}
+                                                {getStatusIcon(agreement.currentState)}
+                                                <Badge className={getStatusColor(agreement.currentState)}>
+                                                    {agreement.currentState}
                                                 </Badge>
                                             </div>
                                         </div>
@@ -226,12 +287,12 @@ export function ArbiterDashboard() {
                                                 <p>{new Date(agreement.deadline).toLocaleDateString()}</p>
                                             </div>
                                             <div>
-                                                <Label className="text-sm text-muted-foreground">Dispute</Label>
-                                                <p className="text-sm truncate">{agreement.disputeReason}</p>
+                                                <Label className="text-sm text-muted-foreground">Dispute Winner</Label>
+                                                <p className="text-sm truncate">{agreement.disputeWinner || "no decision"}</p>
                                             </div>
                                         </div>
                                         <div className="flex justify-end">
-                                            <AgreementDetailsModal agreement={agreement} />
+                                            <AgreementDetailsModal agreementId={agreement.id} handleDialogClose={getAgreementsByArbiter} />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -243,17 +304,17 @@ export function ArbiterDashboard() {
                 <div>
                     <h2 className="mb-4">All Cases</h2>
                     <div className="grid gap-4">
-                        {mockArbiterAgreements.map((agreement) => (
+                        {agreementsData?.agreements?.map((agreement) => (
                             <Card key={agreement.id}>
                                 <CardHeader className="pb-3">
                                     <div className="flex justify-between items-start">
-                                        <CardTitle className="text-base">
-                                            Case #{agreement.id}
+                                        <CardTitle className="text-base font-semibold">
+                                            {agreement.title} #{agreement.id}
                                         </CardTitle>
                                         <div className="flex items-center gap-2">
-                                            {getStatusIcon(agreement.status)}
-                                            <Badge className={getStatusColor(agreement.status)}>
-                                                {agreement.status}
+                                            {getStatusIcon(agreement.currentState)}
+                                            <Badge className={getStatusColor(agreement.currentState)}>
+                                                {agreement.currentState}
                                             </Badge>
                                         </div>
                                     </div>
@@ -270,11 +331,11 @@ export function ArbiterDashboard() {
                                         </div>
                                         <div>
                                             <Label className="text-sm text-muted-foreground">Status</Label>
-                                            <p className="text-sm">{agreement.status}</p>
+                                            <p className="text-sm">{agreement.currentState}</p>
                                         </div>
                                     </div>
                                     <div className="flex justify-end">
-                                        <AgreementDetailsModal agreement={agreement} />
+                                        <AgreementDetailsModal agreementId={agreement.id} handleDialogClose={getAgreementsByArbiter} />
                                     </div>
                                 </CardContent>
                             </Card>

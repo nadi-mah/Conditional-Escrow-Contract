@@ -52,7 +52,7 @@ const getArbiterAgreements = async (req, res) => {
         }
         const agreements = await prisma.agreement.findMany({
             where: { arbiter: arbiterAddress },
-            select: { title: true, amount: true, deadline: true, currentState: true, disputeWinner: true }
+            select: { id: true, title: true, amount: true, deadline: true, currentState: true, disputeWinner: true }
         })
 
         if (!agreements) {

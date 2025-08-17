@@ -8,6 +8,9 @@ class AgreementService {
     async getAgreementsByPayee(data) {
         return await AxiosApiService.get(`payee/${data.payeeAddress}`)
     }
+    async getAgreementsByArbiter(data) {
+        return await AxiosApiService.get(`arbiter/${data.arbiterAddress}`)
+    }
     async getAgreementDetail(data) {
         return await AxiosApiService.get(`detail/${data.agreementId}`)
     }
@@ -29,6 +32,9 @@ class AgreementService {
     }
     async updateReleaseFunds(data) {
         return await AxiosApiService.put(`${data.agreementId}/release-funds`)
+    }
+    async updateResolveDispute(data) {
+        return await AxiosApiService.put(`${data.agreementId}/resolve-dispute`, data)
     }
     async createAgreement(data) {
         return await AxiosApiService.post(`createAgreement`, data)

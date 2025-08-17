@@ -37,7 +37,7 @@ function CreateAgreementModal({ handleDialogClose }) {
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
-        onChainId: 20037,
+        onChainId: 20045,
         title: "",
         payer: "0x123",
         payee: "",
@@ -51,7 +51,7 @@ function CreateAgreementModal({ handleDialogClose }) {
             .then((res) => {
                 console.log(res);
                 setFormData({
-                    onChainId: 20037,
+                    onChainId: 20045,
                     title: "",
                     payer: "0x123",
                     payee: "",
