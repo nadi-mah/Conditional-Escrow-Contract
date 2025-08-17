@@ -193,16 +193,17 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                         <p className="mt-1">{new Date(agreementDetail.deadline).toLocaleString()}</p>
                     </div>
 
-                    <div>
-                        <Label>Confirmation Status</Label>
-                        <p className="mt-1">
-                            {!agreementDetail.payeeConfirmed ? 'Payee Pending Confirmation' :
-                                !agreementDetail.payerConfirmed ? 'Payer Pending Confirmation' :
-                                    agreementDetail.currentState === "Funded" ? "Release Funds Pending" :
-                                        agreementDetail.currentState === "InDispute" ? "Dispute has raised" :
-                                            'Confirmed'}
-                        </p>
-                    </div>
+                    {(agreementDetail.currentState === "Funded" || agreementDetail.currentState === "InDispute") &&
+                        <div>
+                            <Label>Confirmation Status</Label>
+                            <p className="mt-1">
+                                {!agreementDetail.payeeConfirmed ? 'Payee Pending Confirmation' :
+                                    agreementDetail.currentState === "InDispute" ? "Dispute has raised" :
+                                        !agreementDetail.payerConfirmed ? 'Payer Pending Confirmation' :
+                                            agreementDetail.currentState === "Funded" ? "Release Funds Pending" :
+                                                'Confirmed'}
+                            </p>
+                        </div>}
                     {actions.includes("confirm") && (
                         <Button variant="default" className="flex-1" onClick={handleConfirmByPayee}>
                             Confirm Delivery

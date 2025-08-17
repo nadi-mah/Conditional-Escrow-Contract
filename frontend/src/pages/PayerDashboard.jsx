@@ -34,10 +34,14 @@ function getStatusColor(status) {
 }
 
 function CreateAgreementModal({ handleDialogClose }) {
+    const generateRandomNumber = () => {
+        // Generates a number between 10000 and 99999
+        return Math.floor(10000 + Math.random() * 90000);
+    };
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
-        onChainId: 20045,
+        onChainId: generateRandomNumber(),
         title: "",
         payer: "0x123",
         payee: "",
@@ -51,7 +55,7 @@ function CreateAgreementModal({ handleDialogClose }) {
             .then((res) => {
                 console.log(res);
                 setFormData({
-                    onChainId: 20045,
+                    onChainId: generateRandomNumber(),
                     title: "",
                     payer: "0x123",
                     payee: "",
@@ -64,6 +68,7 @@ function CreateAgreementModal({ handleDialogClose }) {
             })
             .catch((error) => console.error(error))
     }
+
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -382,10 +387,6 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                         )}
                     </div>
                 </div>
-                {/* {!isDisputeAllowed && agreementDetail.currentState === 'Funded' &&
-                    <p className="text-sm mt-1 break-all text-muted-foreground">
-                        A dispute can only be raised after the agreement deadline has passed. it cannot be raised if both have confirmed, or neither has.
-                    </p>} */}
             </DialogContent>
         </Dialog>
     );

@@ -139,31 +139,20 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                             <p className="text-sm font-mono mt-1 break-all">{agreementDetail.payee}</p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label>Deadline</Label>
-                            <p className="mt-1">{new Date(agreementDetail.deadline).toLocaleString()}</p>
-                        </div>
-                        {agreementDetail.disputeWinner &&
-                            <div>
-                                <Label>Winner</Label>
-                                <p className="mt-1">{agreementDetail.disputeWinner}</p>
-                            </div>}
+                    <div>
+                        <Label>Deadline</Label>
+                        <p className="mt-1">{new Date(agreementDetail.deadline).toLocaleString()}</p>
                     </div>
+                    {agreementDetail.disputeWinner &&
+                        <div>
+                            {/* <Label>Winner</Label> */}
+                            <p className="mt-1 font-medium text-sm">{`Agreement has been resolved in the favour of ${agreementDetail.disputeWinner}.`}</p>
+                        </div>
+                    }
 
 
                     {agreementDetail.currentState === 'InDispute' && (
                         <div className="space-y-4 pt-4 border-t">
-                            {/* <div>
-                                <Label htmlFor="resolution">Resolution Notes</Label>
-                                <Textarea
-                                    id="resolution"
-                                    placeholder="Enter your resolution decision and reasoning..."
-                                    value={resolution}
-                                    onChange={(e) => setResolution(e.target.value)}
-                                    className="mt-1"
-                                />
-                            </div> */}
                             <div className="flex gap-2">
                                 <Button
                                     variant="default"
@@ -194,7 +183,7 @@ export function ArbiterDashboard() {
     const [pendingDisputes, setPendingDisputes] = useState([]);
     const [resolvedCases, setResolvedCases] = useState([]);
 
-    const arbiterAddress = "0x222";
+    const arbiterAddress = "0x333";
 
     const getAgreementsByArbiter = async () => {
         const data = {
