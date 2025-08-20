@@ -11,6 +11,7 @@ import { Plus, Eye, Clock, CheckCircle, AlertTriangle, XCircle, UserCheck, Loade
 
 // API
 import AgreementService from "../services/agreement";
+import { createAgreement } from "../services/escrow";
 
 
 function getStatusIcon(status) {
@@ -51,22 +52,27 @@ function CreateAgreementModal({ handleDialogClose }) {
     });
     const handlePostAgreement = async () => {
         console.log(formData);
-        await AgreementService.createAgreement(formData)
-            .then((res) => {
-                console.log(res);
-                setFormData({
-                    onChainId: generateRandomNumber(),
-                    title: "",
-                    payer: "0x123",
-                    payee: "",
-                    arbiter: "",
-                    amount: "",
-                    deadline: ""
-                });
-                setIsDialogOpen(false);
-                handleDialogClose();
-            })
-            .catch((error) => console.error(error))
+        const now = Math.floor(Date.now() / 1000);
+        await createAgreement("0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+            , "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"
+            , now)
+
+        // await AgreementService.createAgreement(formData)
+        //     .then((res) => {
+        //         console.log(res);
+        //         setFormData({
+        //             onChainId: generateRandomNumber(),
+        //             title: "",
+        //             payer: "0x123",
+        //             payee: "",
+        //             arbiter: "",
+        //             amount: "",
+        //             deadline: ""
+        //         });
+        //         setIsDialogOpen(false);
+        //         handleDialogClose();
+        //     })
+        //     .catch((error) => console.error(error))
     }
 
 
