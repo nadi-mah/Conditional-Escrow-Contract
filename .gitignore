@@ -12,3 +12,6 @@ out/
 .env
 
 deployedData.text
+/backend
+/frontend
+/contracts
