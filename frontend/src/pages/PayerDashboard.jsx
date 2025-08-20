@@ -11,7 +11,7 @@ import { Plus, Eye, Clock, CheckCircle, AlertTriangle, XCircle, UserCheck, Loade
 
 // API
 import AgreementService from "../services/agreement";
-import { createAgreement } from "../services/escrow";
+import { createAgreement, getAgreement, readNextAgreementId, getBalance } from "../services/escrow";
 
 
 function getStatusIcon(status) {
@@ -53,9 +53,17 @@ function CreateAgreementModal({ handleDialogClose }) {
     const handlePostAgreement = async () => {
         console.log(formData);
         const now = Math.floor(Date.now() / 1000);
-        await createAgreement("0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
-            , "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"
-            , now)
+        // console.log(now);
+        // const result = await createAgreement("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+        //     , "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+        //     , now)
+        // console.log(result);
+        // const result = await getBalance();
+        // console.log(result);
+        // await readNextAgreementId();
+
+        const result = await getAgreement(1);
+        console.log(result);
 
         // await AgreementService.createAgreement(formData)
         //     .then((res) => {

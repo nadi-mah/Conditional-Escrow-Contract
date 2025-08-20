@@ -1,4 +1,6 @@
 import { ethers } from "ethers";
+import { JsonRpcProvider, Wallet, Contract } from "ethers";
+import { getAddress, parseUnits } from "ethers";
 import EscrowAbi from "../../../out/Escrow.sol/Escrow.json";
 
 const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
@@ -11,20 +13,44 @@ const keys = {
 export async function getEscrowContractFromMetaMask() {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
-    return new ethers.Contract(contractAddress, EscrowAbi, signer);
+    return new ethers.Contract(contractAddress, EscrowAbi.abi, signer);
 }
 
 export function getEscrowContract(role) {
-    const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
+    const provider = new JsonRpcProvider("http://127.0.0.1:8545");
     const privateKey = keys[role];
     if (!privateKey) throw new Error("Invalid role");
-    const wallet = new ethers.Wallet(privateKey, provider);
-    return new ethers.Contract(contractAddress, EscrowAbi, wallet);
+    const wallet = new Wallet(privateKey, provider);
+    return new Contract(contractAddress, EscrowAbi.abi, wallet);
 }
 
 export async function createAgreement(payee, arbiter, deadline) {
-    const contract = getEscrowContract("payer");
-    const tx = await contract.createAgreement(payee, arbiter, deadline);
-    return tx.wait();
+    const payeeAddress = getAddress(payee);
+    const arbiterAddress = getAddress(arbiter);
 
+    const contract = getEscrowContract("payer");
+
+    const amountToSend = parseUnits("0.1"); // 0.1 ETH in wei
+    console.log(amountToSend);
+    const options = { value: amountToSend };
+
+    const tx = await contract.createAgreement(payeeAddress, arbiterAddress, deadline, options);
+    return tx.wait();
+}
+export async function getAgreement(agreementId) {
+    const contract = getEscrowContract("payer");
+    const tx = await contract.getAgreements(agreementId);
+    return tx;
+}
+export async function getBalance() {
+    const contract = getEscrowContract("payer");
+    const tx = await contract.getEscrowBalance();
+    return tx;
+}
+
+export async function readNextAgreementId() {
+    const contract = getEscrowContract("payer");
+    const id = await contract.nextAgreementId();
+    console.log("Next Agreement ID:", id.toString());
+    return id;
 }
