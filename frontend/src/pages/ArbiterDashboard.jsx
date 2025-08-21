@@ -7,45 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/Dialog';
 import { Label } from '../components/Label';
-import { Textarea } from '../components/Textarea';
 import { Eye, Clock, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 // API
 import AgreementService from "../services/agreement";
 
-// Mock data for arbiter agreements (where user is arbiter)
-const mockArbiterAgreements = [
-    {
-        id: '3',
-        payerAddress: '0x789d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        payeeAddress: '0x742d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        amount: '0.75',
-        deadline: '2025-08-12T16:45:00',
-        status: 'InDispute',
-        confirmed: false,
-        disputeReason: 'Service not delivered as agreed'
-    },
-    {
-        id: '6',
-        payerAddress: '0x321d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        payeeAddress: '0x456d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        amount: '1.2',
-        deadline: '2025-08-18T09:30:00',
-        status: 'InDispute',
-        confirmed: false,
-        disputeReason: 'Quality issues with delivered work'
-    },
-    {
-        id: '7',
-        payerAddress: '0x123d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        payeeAddress: '0x456d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        amount: '2.0',
-        deadline: '2025-08-10T11:00:00',
-        status: 'Completed',
-        confirmed: true,
-        disputeReason: null
-    }
-];
 
 function getStatusIcon(status) {
     switch (status) {
@@ -183,7 +149,7 @@ export function ArbiterDashboard() {
     const [pendingDisputes, setPendingDisputes] = useState([]);
     const [resolvedCases, setResolvedCases] = useState([]);
 
-    const arbiterAddress = "0x333";
+    const arbiterAddress = import.meta.env.VITE_ARBITER_ADDRESS;
 
     const getAgreementsByArbiter = async () => {
         const data = {

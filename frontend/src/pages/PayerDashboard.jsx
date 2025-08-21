@@ -11,7 +11,7 @@ import { Plus, Eye, Clock, CheckCircle, AlertTriangle, XCircle, UserCheck, Loade
 
 // API
 import AgreementService from "../services/agreement";
-import { createAgreement, getAgreement, readNextAgreementId, getBalance } from "../services/escrow";
+import { createAgreement, confirmByPayer, readNextAgreementId, raiseDispute, extendDuration, getAgreement } from "../services/escrow";
 
 
 function getStatusIcon(status) {
@@ -35,60 +35,58 @@ function getStatusColor(status) {
 }
 
 function CreateAgreementModal({ handleDialogClose }) {
-    const generateRandomNumber = () => {
-        // Generates a number between 10000 and 99999
-        return Math.floor(10000 + Math.random() * 90000);
-    };
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
-        onChainId: generateRandomNumber(),
+        onChainId: null,
         title: "",
-        payer: "0x123",
-        payee: "",
-        arbiter: "",
+        payer: import.meta.env.VITE_PAYER_ADDRESS,
+        payee: import.meta.env.VITE_PAYEE_ADDRESS,
+        arbiter: import.meta.env.VITE_ARBITER_ADDRESS,
         amount: "",
         deadline: ""
     });
-    const handlePostAgreement = async () => {
-        console.log(formData);
-        const now = Math.floor(Date.now() / 1000);
-        // console.log(now);
-        // const result = await createAgreement("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
-        //     , "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
-        //     , now)
-        // console.log(result);
-        // const result = await getBalance();
-        // console.log(result);
-        // await readNextAgreementId();
 
-        const result = await getAgreement(1);
-        console.log(result);
+    const handlePostAgreementOnChain = async () => {
+        // Send to blockchain
+        const timeStamp = Math.floor(new Date(formData.deadline) / 1000);
+        const payeeAddress = import.meta.env.VITE_PAYEE_ADDRESS;
+        const arbiterAddress = import.meta.env.VITE_ARBITER_ADDRESS;
+        const ethAmount = formData.amount;
 
-        // await AgreementService.createAgreement(formData)
-        //     .then((res) => {
-        //         console.log(res);
-        //         setFormData({
-        //             onChainId: generateRandomNumber(),
-        //             title: "",
-        //             payer: "0x123",
-        //             payee: "",
-        //             arbiter: "",
-        //             amount: "",
-        //             deadline: ""
-        //         });
-        //         setIsDialogOpen(false);
-        //         handleDialogClose();
-        //     })
-        //     .catch((error) => console.error(error))
+        // Call createAgreement from escrow contract
+        try {
+            await createAgreement(payeeAddress, arbiterAddress, timeStamp, ethAmount);
+            const onChainId = await readNextAgreementId();
+            const form = { ...formData, ["onChainId"]: parseInt(onChainId) - 1 }
+            handlePostAgreement(form);
+
+        } catch (error) {
+            // console.error(error);
+        }
     }
+    const handlePostAgreement = async (form) => {
+        console.log(form);
 
-
+        await AgreementService.createAgreement(form)
+            .then((res) => {
+                setFormData({
+                    onChainId: null,
+                    title: "",
+                    payer: import.meta.env.VITE_PAYER_ADDRESS,
+                    payee: import.meta.env.VITE_PAYEE_ADDRESS,
+                    arbiter: import.meta.env.VITE_ARBITER_ADDRESS,
+                    amount: "",
+                    deadline: ""
+                });
+                setIsDialogOpen(false);
+                handleDialogClose();
+            })
+            .catch((error) => console.error(error))
+    }
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log(formData);
-        handlePostAgreement();
-
+        handlePostAgreementOnChain();
     };
 
 
@@ -189,25 +187,39 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
             agreementId: agreementId
         }
         await AgreementService.getAgreementDetail(data)
-            .then(res => setAgreementDetail(res.data.agreement))
+            .then(res => {
+                setAgreementDetail(res.data.agreement);
+            })
             .catch(err => console.error(err));
 
     }
     const handleConfirmByPayer = async () => {
-        const data = {
-            agreementId: agreementId
-        }
-        await AgreementService.updateRequestCompletionPayer(data)
-            .then(() => getAgreementDetail())
-            .catch(err => console.error(err));
+        try {
+            await confirmByPayer(agreementDetail.onChainId);
+
+            // Post confirm to database
+            const data = {
+                agreementId: agreementId
+            }
+            await AgreementService.updateRequestCompletionPayer(data)
+                .then(() => getAgreementDetail())
+                .catch(err => console.error(err));
+        } catch (error) { }
+
     }
     const handleRaiseDispute = async () => {
-        const data = {
-            agreementId: agreementId
-        }
-        await AgreementService.updateRaiseDispute(data)
-            .then(() => getAgreementDetail())
-            .catch(err => console.error(err));
+        try {
+            await raiseDispute(agreementDetail.onChainId, "payer");
+
+            // Post dispute on db
+            const data = {
+                agreementId: agreementId
+            }
+            await AgreementService.updateRaiseDispute(data)
+                .then(() => getAgreementDetail())
+                .catch(err => console.error(err));
+        } catch (error) { }
+
     }
     const handleCancelExpiredAgreement = async () => {
         const data = {
@@ -219,18 +231,26 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     }
     const handleExtendDuration = async () => {
         if (newDeadline) {
-            const data = {
-                agreementId: agreementId,
-                deadline: new Date(newDeadline)
-            }
-            await AgreementService.updateExtendDuration(data)
-                .then(() => {
-                    getAgreementDetail();
-                    setNewDeadline(null);
-                    setNewDeadlineInput(false);
+            // Extend on blockchain
+            const newTimestamp = Math.floor(new Date(newDeadline) / 1000);
+            try {
+                await extendDuration(agreementDetail.onChainId, newTimestamp);
 
-                })
-                .catch(err => console.error(err));
+                // Post deadline to database
+                const data = {
+                    agreementId: agreementId,
+                    deadline: new Date(newDeadline)
+                }
+                await AgreementService.updateExtendDuration(data)
+                    .then(() => {
+                        getAgreementDetail();
+                        setNewDeadline(null);
+                        setNewDeadlineInput(false);
+
+                    })
+                    .catch(err => console.error(err));
+
+            } catch (error) { }
         }
 
     }
@@ -287,6 +307,12 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
         setActions(getAvailableActions(agreementDetail));
     }, [agreementDetail])
 
+    const getAgreementhandler = () => {
+        console.log(getAgreement());
+    }
+    useEffect(() => {
+        getAgreementhandler();
+    }, [])
 
 
 
@@ -409,7 +435,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 export function PayerDashboard() {
 
     const [agreements, setAgreements] = useState([]);
-    const payerAddress = "0x123";
+    const payerAddress = import.meta.env.VITE_PAYER_ADDRESS;
 
     const getAgreementsByPayer = async () => {
         const data = {

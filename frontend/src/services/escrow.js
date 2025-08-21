@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { Interface } from "ethers";
 import { JsonRpcProvider, Wallet, Contract } from "ethers";
 import { getAddress, parseUnits } from "ethers";
 import EscrowAbi from "../../../out/Escrow.sol/Escrow.json";
@@ -23,20 +24,130 @@ export function getEscrowContract(role) {
     const wallet = new Wallet(privateKey, provider);
     return new Contract(contractAddress, EscrowAbi.abi, wallet);
 }
+// Create Agreement
+export async function createAgreement(payee, arbiter, deadline, ethAmount) {
 
-export async function createAgreement(payee, arbiter, deadline) {
     const payeeAddress = getAddress(payee);
     const arbiterAddress = getAddress(arbiter);
 
     const contract = getEscrowContract("payer");
 
-    const amountToSend = parseUnits("0.1"); // 0.1 ETH in wei
+    const amountToSend = parseUnits(ethAmount); // in wei
     console.log(amountToSend);
     const options = { value: amountToSend };
 
-    const tx = await contract.createAgreement(payeeAddress, arbiterAddress, deadline, options);
-    return tx.wait();
+    try {
+        const tx = await contract.createAgreement(payeeAddress, arbiterAddress, deadline, options);
+        return tx.wait();
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
+
 }
+
+// Get agreement onchain ID for database
+export async function readNextAgreementId() {
+    const contract = getEscrowContract("payer");
+    const id = await contract.nextAgreementId();
+    console.log("Next Agreement ID:", id.toString());
+    return id;
+
+}
+export async function extendDuration(id, newDuration) {
+    const contract = getEscrowContract("payer");
+    try {
+        const tx = await contract.extendDeadline(parseInt(id), newDuration);
+        return tx.wait();
+
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
+}
+export async function confirmByPayee(id) {
+    const contract = getEscrowContract("payee");
+    try {
+        const tx = await contract.payeeRequestCompletion(parseInt(id),);
+        return tx.wait();
+
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
+}
+export async function confirmByPayer(id) {
+    const contract = getEscrowContract("payer");
+    try {
+        const tx = await contract.payerRequestCompletion(parseInt(id),);
+        return tx.wait();
+
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
+}
+
+export async function raiseDispute(id, role) {
+    const contract = getEscrowContract(role);
+    try {
+        const tx = await contract.raiseDispute(parseInt(id),);
+        return tx.wait();
+
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
+}
+export async function releaseFunds(id) {
+    const contract = getEscrowContract("payee");
+    try {
+        const balanceBefore = await getBalance();
+        console.log("Escrow Balance Before: ", balanceBefore);
+        const tx = await contract.releaseFunds(parseInt(id),);
+        const balanceAfter = await getBalance();
+        console.log("Escrow Balance after: ", balanceAfter);
+        return tx.wait();
+
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
+}
+function handleCustomError(err) {
+    const iface = new Interface(EscrowAbi.abi);
+    try {
+        const decoded = iface.parseError(err.data);
+        console.error("Custom error:", decoded.name, decoded.args);
+    } catch {
+        console.error("Raw revert data:", err.data);
+    }
+}
+
 export async function getAgreement(agreementId) {
     const contract = getEscrowContract("payer");
     const tx = await contract.getAgreements(agreementId);
@@ -48,9 +159,3 @@ export async function getBalance() {
     return tx;
 }
 
-export async function readNextAgreementId() {
-    const contract = getEscrowContract("payer");
-    const id = await contract.nextAgreementId();
-    console.log("Next Agreement ID:", id.toString());
-    return id;
-}

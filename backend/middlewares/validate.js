@@ -1,6 +1,6 @@
 const validAddress = (address, role) => {
     const zeroAddress = "0x0";
-    const isValid = /^0x[a-fA-F0-9]{3}$/.test(address) && address !== zeroAddress;
+    const isValid = /^0x[a-fA-F0-9]{40}$/.test(address) && address !== zeroAddress;
 
     return {
         status: isValid,

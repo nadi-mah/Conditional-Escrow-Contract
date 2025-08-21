@@ -10,6 +10,8 @@ import { Eye, Clock, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 // API
 import AgreementService from "../services/agreement";
+import { confirmByPayee, releaseFunds } from "../services/escrow";
+
 
 
 // Mock data for payee agreements (received agreements)
@@ -81,12 +83,19 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 
     }
     const handleConfirmByPayee = async () => {
-        const data = {
-            agreementId: agreementId
-        }
-        await AgreementService.updateRequestCompletionPayee(data)
-            .then(() => getAgreementDetail())
-            .catch(err => console.error(err));
+        try {
+            await confirmByPayee(agreementDetail.onChainId);
+
+            // Post confirm to database
+            const data = {
+                agreementId: agreementId
+            }
+            await AgreementService.updateRequestCompletionPayee(data)
+                .then(() => getAgreementDetail())
+                .catch(err => console.error(err));
+
+        } catch (error) { }
+
     }
     const handleRaiseDispute = async () => {
         const data = {
@@ -97,12 +106,20 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
             .catch(err => console.error(err));
     }
     const handleReleaseFunds = async () => {
-        const data = {
-            agreementId: agreementId
+        try {
+            await releaseFunds(agreementDetail.onChainId);
+
+            // Db post data
+            const data = {
+                agreementId: agreementId
+            }
+            await AgreementService.updateReleaseFunds(data)
+                .then(() => getAgreementDetail())
+                .catch(err => console.error(err));
+        } catch (error) {
+
         }
-        await AgreementService.updateReleaseFunds(data)
-            .then(() => getAgreementDetail())
-            .catch(err => console.error(err));
+
     }
     const getAvailableActions = () => {
         const actions = []
@@ -227,7 +244,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 export function PayeeDashboard() {
 
     const [agreements, setAgreements] = useState([]);
-    const payeeAddress = "0x222";
+    const payeeAddress = import.meta.env.VITE_PAYEE_ADDRESS;
 
     const getAgreementsByPayee = async () => {
         const data = {
