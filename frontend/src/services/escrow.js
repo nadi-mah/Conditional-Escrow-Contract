@@ -24,7 +24,7 @@ export function getEscrowContract(role) {
     const wallet = new Wallet(privateKey, provider);
     return new Contract(contractAddress, EscrowAbi.abi, wallet);
 }
-// Create Agreement
+/** Create Agreement*/
 export async function createAgreement(payee, arbiter, deadline, ethAmount) {
 
     const payeeAddress = getAddress(payee);
@@ -50,12 +50,29 @@ export async function createAgreement(payee, arbiter, deadline, ethAmount) {
 
 }
 
-// Get agreement onchain ID for database
+/** Get agreement onchain ID for database */
 export async function readNextAgreementId() {
     const contract = getEscrowContract("payer");
     const id = await contract.nextAgreementId();
     console.log("Next Agreement ID:", id.toString());
     return id;
+
+}
+
+/** Get details of an agreement */
+export async function getAgreement(id) {
+    const contract = getEscrowContract("payer");
+    try {
+        const tx = await contract.getAgreements(id);
+        return tx;
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
 
 }
 export async function extendDuration(id, newDuration) {
@@ -103,11 +120,25 @@ export async function confirmByPayer(id) {
         throw err;
     }
 }
+export async function cancelExpiredAgreement(id) {
+    const contract = getEscrowContract("payer");
+    try {
+        const tx = await contract.cancelExpiredAgreement(parseInt(id));
+        return tx.wait();
 
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
+}
 export async function raiseDispute(id, role) {
     const contract = getEscrowContract(role);
     try {
-        const tx = await contract.raiseDispute(parseInt(id),);
+        const tx = await contract.raiseDispute(parseInt(id));
         return tx.wait();
 
     } catch (err) {
@@ -138,6 +169,29 @@ export async function releaseFunds(id) {
         throw err;
     }
 }
+export async function resolveDispute(id, winner) {
+    const contract = getEscrowContract("arbiter");
+
+    try {
+        const balanceBefore = await getBalance();
+        console.log("Escrow Balance Before: ", balanceBefore);
+        await getPartiesBalance();
+        const tx = await contract.resolveDispute(parseInt(id), winner);
+
+        const balanceAfter = await getBalance();
+        console.log("Escrow Balance after: ", balanceAfter);
+        await getPartiesBalance()
+        return tx.wait();
+
+    } catch (err) {
+        if (err.data) {
+            handleCustomError(err)
+        } else {
+            console.error(err);
+        }
+        throw err;
+    }
+}
 function handleCustomError(err) {
     const iface = new Interface(EscrowAbi.abi);
     try {
@@ -147,11 +201,17 @@ function handleCustomError(err) {
         console.error("Raw revert data:", err.data);
     }
 }
+async function getPartiesBalance() {
+    const provider = new JsonRpcProvider("http://127.0.0.1:8545");
+    const payerAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    const payeeAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
 
-export async function getAgreement(agreementId) {
-    const contract = getEscrowContract("payer");
-    const tx = await contract.getAgreements(agreementId);
-    return tx;
+    const payerBalance = await provider.getBalance(payerAddress);
+    console.log("Payer's Balance: ", payerBalance);
+
+    const payeeBalance = await provider.getBalance(payeeAddress);
+    console.log("Payee's Balance: ", payeeBalance);
+
 }
 export async function getBalance() {
     const contract = getEscrowContract("payer");

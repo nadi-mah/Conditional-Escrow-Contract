@@ -11,6 +11,7 @@ import { Eye, Clock, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 // API
 import AgreementService from "../services/agreement";
+import { resolveDispute, getAgreement } from "../services/escrow";
 
 
 function getStatusIcon(status) {
@@ -38,30 +39,46 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     const [agreementDetail, setAgreementDetail] = useState({});
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-
-    const handleResolveDispute = async (decision) => {
-        const data = {
-            agreementId: agreementId,
-            winner: decision
-        }
-        await AgreementService.updateResolveDispute(data)
-            .then(() => getAgreementDetail())
-            .catch(err => console.error(err))
-
-    }
-    const handleResolve = (decision) => {
-        console.log(`Resolving in favor of ${decision}:`, resolution);
-        handleResolveDispute(decision);
-    };
     const getAgreementDetail = async () => {
         const data = {
             agreementId: agreementId
         }
         await AgreementService.getAgreementDetail(data)
-            .then(res => setAgreementDetail(res.data.agreement))
+            .then(res => {
+                setAgreementDetail(res.data.agreement);
+                handleGetAgreementFromContract(res.data.agreement.onChainId);
+            })
             .catch(err => console.error(err));
 
     }
+    const handleResolveDispute = async (decision) => {
+        try {
+            const winnerAddress = decision === "payer" ? import.meta.env.VITE_PAYER_ADDRESS : import.meta.env.VITE_PAYEE_ADDRESS;
+            await resolveDispute(agreementDetail.onChainId, winnerAddress);
+
+            // DB
+            const data = {
+                agreementId: agreementId,
+                winner: decision
+            }
+            await AgreementService.updateResolveDispute(data)
+                .then(() => getAgreementDetail())
+                .catch(err => console.error(err))
+        } catch (error) {
+            console.error(error);
+        }
+    }
+    const handleGetAgreementFromContract = async (onChainId) => {
+        try {
+            const agreementOnChainDetail = await getAgreement(onChainId);
+            console.log(agreementOnChainDetail);
+        } catch (error) {
+        }
+    }
+    const handleResolve = (decision) => {
+        console.log(`Resolving in favor of ${decision}:`, resolution);
+        handleResolveDispute(decision);
+    };
 
     return (
         <Dialog open={isDialogOpen} onOpenChange={(open) => {

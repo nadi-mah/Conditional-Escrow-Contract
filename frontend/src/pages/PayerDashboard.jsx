@@ -11,7 +11,15 @@ import { Plus, Eye, Clock, CheckCircle, AlertTriangle, XCircle, UserCheck, Loade
 
 // API
 import AgreementService from "../services/agreement";
-import { createAgreement, confirmByPayer, readNextAgreementId, raiseDispute, extendDuration, getAgreement } from "../services/escrow";
+import {
+    createAgreement,
+    confirmByPayer,
+    readNextAgreementId,
+    raiseDispute,
+    extendDuration,
+    getAgreement,
+    cancelExpiredAgreement
+} from "../services/escrow";
 
 
 function getStatusIcon(status) {
@@ -189,6 +197,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
         await AgreementService.getAgreementDetail(data)
             .then(res => {
                 setAgreementDetail(res.data.agreement);
+                handleGetAgreementFromContract(res.data.agreement.onChainId);
             })
             .catch(err => console.error(err));
 
@@ -222,12 +231,18 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 
     }
     const handleCancelExpiredAgreement = async () => {
-        const data = {
-            agreementId: agreementId
-        }
-        await AgreementService.updateCancelExpiredAgreement(data)
-            .then(() => getAgreementDetail())
-            .catch(err => console.error(err));
+        try {
+            await cancelExpiredAgreement(agreementDetail.onChainId);
+
+            // DB
+            const data = {
+                agreementId: agreementId
+            }
+            await AgreementService.updateCancelExpiredAgreement(data)
+                .then(() => getAgreementDetail())
+                .catch(err => console.error(err));
+        } catch (error) { }
+
     }
     const handleExtendDuration = async () => {
         if (newDeadline) {
@@ -253,6 +268,13 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
             } catch (error) { }
         }
 
+    }
+    const handleGetAgreementFromContract = async (onChainId) => {
+        try {
+            const agreementOnChainDetail = await getAgreement(onChainId);
+            console.log(agreementOnChainDetail);
+        } catch (error) {
+        }
     }
     const getAvailableActions = () => {
         const actions = []
@@ -307,12 +329,6 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
         setActions(getAvailableActions(agreementDetail));
     }, [agreementDetail])
 
-    const getAgreementhandler = () => {
-        console.log(getAgreement());
-    }
-    useEffect(() => {
-        getAgreementhandler();
-    }, [])
 
 
 

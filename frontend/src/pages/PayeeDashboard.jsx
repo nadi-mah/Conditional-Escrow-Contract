@@ -10,40 +10,14 @@ import { Eye, Clock, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 // API
 import AgreementService from "../services/agreement";
-import { confirmByPayee, releaseFunds } from "../services/escrow";
+import {
+    confirmByPayee,
+    releaseFunds,
+    getAgreement,
+    raiseDispute
+} from "../services/escrow";
 
 
-
-// Mock data for payee agreements (received agreements)
-const mockPayeeAgreements = [
-    {
-        id: '1',
-        payerAddress: '0x456d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        arbiterAddress: '0x8ba1f109551bD432803012645Hac136c6d03b442',
-        amount: '2.5',
-        deadline: '2025-08-15T14:30:00',
-        status: 'Funded',
-        confirmed: false
-    },
-    {
-        id: '4',
-        payerAddress: '0x789d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        arbiterAddress: '0x456a1f109551bD432803012645Hac136c6d03b442',
-        amount: '0.8',
-        deadline: '2025-08-25T12:00:00',
-        status: 'Completed',
-        confirmed: true
-    },
-    {
-        id: '5',
-        payerAddress: '0x321d35Cc6329C1532D4b2f90aFca57DF22B1bD4C',
-        arbiterAddress: '0x101f109551bD432803012645Hac136c6d03b442',
-        amount: '1.2',
-        deadline: '2025-08-18T09:30:00',
-        status: 'InDispute',
-        confirmed: false
-    }
-];
 
 function getStatusIcon(status) {
     switch (status) {
@@ -78,7 +52,10 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
             agreementId: agreementId
         }
         await AgreementService.getAgreementDetail(data)
-            .then(res => setAgreementDetail(res.data.agreement))
+            .then(res => {
+                setAgreementDetail(res.data.agreement);
+                handleGetAgreementFromContract(res.data.agreement.onChainId);
+            })
             .catch(err => console.error(err));
 
     }
@@ -98,12 +75,19 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 
     }
     const handleRaiseDispute = async () => {
-        const data = {
-            agreementId: agreementId
-        }
-        await AgreementService.updateRaiseDispute(data)
-            .then(() => getAgreementDetail())
-            .catch(err => console.error(err));
+        try {
+            await raiseDispute(agreementDetail.onChainId, "payee");
+
+            // DB
+            const data = {
+                agreementId: agreementId
+            }
+            await AgreementService.updateRaiseDispute(data)
+                .then(() => getAgreementDetail())
+                .catch(err => console.error(err));
+
+        } catch (error) { }
+
     }
     const handleReleaseFunds = async () => {
         try {
@@ -120,6 +104,13 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 
         }
 
+    }
+    const handleGetAgreementFromContract = async (onChainId) => {
+        try {
+            const agreementOnChainDetail = await getAgreement(onChainId);
+            console.log(agreementOnChainDetail);
+        } catch (error) {
+        }
     }
     const getAvailableActions = () => {
         const actions = []
