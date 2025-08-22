@@ -43,68 +43,66 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 
     const [agreementDetail, setAgreementDetail] = useState({});
 
-    const [actions, setActions] = useState([]);
-
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const getAgreementDetail = async () => {
-        const data = {
-            agreementId: agreementId
+        try {
+            const { data } = await AgreementService.getAgreementDetail({ agreementId });
+            setAgreementDetail(data.agreement);
+            await handleGetAgreementFromContract(data.agreement.onChainId);
+        } catch (err) {
+            console.error(err);
         }
-        await AgreementService.getAgreementDetail(data)
-            .then(res => {
-                setAgreementDetail(res.data.agreement);
-                handleGetAgreementFromContract(res.data.agreement.onChainId);
-            })
-            .catch(err => console.error(err));
-
-    }
+    };
     const handleConfirmByPayee = async () => {
         try {
             await confirmByPayee(agreementDetail.onChainId);
 
             // Post confirm to database
-            const data = {
-                agreementId: agreementId
-            }
-            await AgreementService.updateRequestCompletionPayee(data)
-                .then(() => getAgreementDetail())
-                .catch(err => console.error(err));
+            const data = { agreementId };
+            await AgreementService.updateRequestCompletionPayee(data);
 
-        } catch (error) { }
+            // Refresh agreement detail
+            await getAgreementDetail();
 
-    }
+        } catch (err) {
+            console.error("Failed to confirm by payee:", err);
+        }
+    };
+
     const handleRaiseDispute = async () => {
         try {
             await raiseDispute(agreementDetail.onChainId, "payee");
 
-            // DB
-            const data = {
-                agreementId: agreementId
-            }
-            await AgreementService.updateRaiseDispute(data)
-                .then(() => getAgreementDetail())
-                .catch(err => console.error(err));
+            // Post dispute to database
+            const data = { agreementId }
+            await AgreementService.updateRaiseDispute(data);
 
-        } catch (error) { }
+            // Refresh agreement detail
+            await getAgreementDetail();
+
+        } catch (err) {
+            console.error("Failed to raise dispute by payee:", err);
+        }
 
     }
     const handleReleaseFunds = async () => {
         try {
             await releaseFunds(agreementDetail.onChainId);
 
-            // Db post data
-            const data = {
-                agreementId: agreementId
-            }
-            await AgreementService.updateReleaseFunds(data)
-                .then(() => getAgreementDetail())
-                .catch(err => console.error(err));
-        } catch (error) {
+            // Post release to database
+            const data = { agreementId }
+            await AgreementService.updateReleaseFunds(data);
 
+            // Refresh agreement detail
+            await getAgreementDetail();
+
+        } catch (err) {
+            console.error("Failed to release funds by payee:", err);
         }
 
     }
+    /** For debugging purposes */
     const handleGetAgreementFromContract = async (onChainId) => {
         try {
             const agreementOnChainDetail = await getAgreement(onChainId);
@@ -150,9 +148,9 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     const handleDetailModal = () => {
         getAgreementDetail();
     }
-    useEffect(() => {
-        setActions(getAvailableActions(agreementDetail));
-    }, [agreementDetail])
+
+    const actions = useMemo(() => getAvailableActions(agreementDetail), [agreementDetail]);
+
 
     return (
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
