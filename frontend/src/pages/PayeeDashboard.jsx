@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 // Components 
 import { Button } from '../components/Button';
@@ -49,6 +49,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
         try {
             const { data } = await AgreementService.getAgreementDetail({ agreementId });
             setAgreementDetail(data.agreement);
+            console.log(data.agreement);
             await handleGetAgreementFromContract(data.agreement.onChainId);
         } catch (err) {
             console.error(err);
@@ -203,13 +204,27 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                         <div>
                             <Label>Confirmation Status</Label>
                             <p className="mt-1">
-                                {!agreementDetail.payeeConfirmed ? 'Payee Pending Confirmation' :
-                                    agreementDetail.currentState === "InDispute" ? "Dispute has raised" :
+                                {
+                                    agreementDetail.currentState === "Funded" ?
+                                        !agreementDetail.payeeConfirmed ? "Awaiting Payee’s Delivery"
+                                            : !agreementDetail.payerConfirmed ? "Awaiting Payer Approval"
+                                                : "Waiting for Payee to Claim Funds"
+                                        : agreementDetail.currentState === "InDispute" ? "Dispute Raised!"
+                                            : ""}
+                                {/* {!agreementDetail.payeeConfirmed ? 'Payee Pending Confirmation' :
+                                    agreementDetail.currentState === "InDispute" ? "Dispute Raised!" :
                                         !agreementDetail.payerConfirmed ? 'Payer Pending Confirmation' :
                                             agreementDetail.currentState === "Funded" ? "Release Funds Pending" :
-                                                'Confirmed'}
+                                                'Confirmed'} */}
                             </p>
                         </div>}
+                    {agreementDetail.currentState === "Completed" && agreementDetail.disputeWinner &&
+                        <div>
+                            <Label>Dispute Detail</Label>
+                            <p className="mt-1">{`This agreement had a dispute, resolved in favor of ${agreementDetail.disputeWinner}`}.</p>
+                        </div>}
+
+
                     {actions.includes("confirm") && (
                         <Button variant="default" className="flex-1" onClick={handleConfirmByPayee}>
                             Confirm Delivery

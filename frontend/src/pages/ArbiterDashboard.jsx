@@ -35,7 +35,6 @@ function getStatusColor(status) {
 }
 
 function AgreementDetailsModal({ agreementId, handleDialogClose }) {
-    const [resolution, setResolution] = useState('');
     const [agreementDetail, setAgreementDetail] = useState({});
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -76,7 +75,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
         }
     }
     const handleResolve = (decision) => {
-        console.log(`Resolving in favor of ${decision}:`, resolution);
+        console.log(`Resolving in favor of ${decision}`);
         handleResolveDispute(decision);
     };
 
@@ -129,7 +128,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                     {agreementDetail.disputeWinner &&
                         <div>
                             {/* <Label>Winner</Label> */}
-                            <p className="mt-1 font-medium text-sm">{`Agreement has been resolved in the favour of ${agreementDetail.disputeWinner}.`}</p>
+                            <p className="mt-1 font-medium text-sm">{`Agreement has been resolved in the favor of ${agreementDetail.disputeWinner}.`}</p>
                         </div>
                     }
 

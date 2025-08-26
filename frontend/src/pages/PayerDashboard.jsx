@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 // Components
 import { Button } from '../components/Button';
@@ -187,7 +187,6 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     const [newDeadlineInput, setNewDeadlineInput] = useState(false);
     const [newDeadline, setNewDeadline] = useState(null);
 
-    const [actions, setActions] = useState([]);
 
 
     const getAgreementDetail = async () => {
@@ -207,46 +206,51 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
             await confirmByPayer(agreementDetail.onChainId);
 
             // Post confirm to database
-            const data = {
-                agreementId: agreementId
-            }
-            await AgreementService.updateRequestCompletionPayer(data)
-                .then(() => getAgreementDetail())
-                .catch(err => console.error(err));
-        } catch (error) { }
+            const data = { agreementId }
+            await AgreementService.updateRequestCompletionPayer(data);
+
+            // Refresh agreement detail
+            await getAgreementDetail();
+
+        } catch (error) {
+            console.error("Failed to confirm by payer:", err);
+        }
 
     }
     const handleRaiseDispute = async () => {
         try {
             await raiseDispute(agreementDetail.onChainId, "payer");
 
-            // Post dispute on db
-            const data = {
-                agreementId: agreementId
-            }
-            await AgreementService.updateRaiseDispute(data)
-                .then(() => getAgreementDetail())
-                .catch(err => console.error(err));
-        } catch (error) { }
+            // Post dispute to database
+            const data = { agreementId }
+            await AgreementService.updateRaiseDispute(data);
+
+            // Refresh agreement detail
+            await getAgreementDetail();
+
+        } catch (error) {
+            console.error("Failed to raise dispute by payee:", err);
+        }
 
     }
     const handleCancelExpiredAgreement = async () => {
         try {
             await cancelExpiredAgreement(agreementDetail.onChainId);
 
-            // DB
-            const data = {
-                agreementId: agreementId
-            }
-            await AgreementService.updateCancelExpiredAgreement(data)
-                .then(() => getAgreementDetail())
-                .catch(err => console.error(err));
-        } catch (error) { }
+            // Post expiration to database
+            const data = { agreementId }
+            await AgreementService.updateCancelExpiredAgreement(data);
+
+            // Refresh agreement detail
+            await getAgreementDetail();
+
+        } catch (error) {
+            console.error("Failed to cancel expired agreement by payer:", err);
+        }
 
     }
     const handleExtendDuration = async () => {
         if (newDeadline) {
-            // Extend on blockchain
             const newTimestamp = Math.floor(new Date(newDeadline) / 1000);
             try {
                 await extendDuration(agreementDetail.onChainId, newTimestamp);
@@ -256,19 +260,21 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                     agreementId: agreementId,
                     deadline: new Date(newDeadline)
                 }
-                await AgreementService.updateExtendDuration(data)
-                    .then(() => {
-                        getAgreementDetail();
-                        setNewDeadline(null);
-                        setNewDeadlineInput(false);
+                await AgreementService.updateExtendDuration(data);
 
-                    })
-                    .catch(err => console.error(err));
+                // Refresh agreement detail
+                getAgreementDetail();
+                setNewDeadline(null);
+                setNewDeadlineInput(false);
 
-            } catch (error) { }
+            } catch (error) {
+                console.error("Failed to extend duration by payer:", err);
+            }
         }
 
     }
+
+    /** For debugging purposes */
     const handleGetAgreementFromContract = async (onChainId) => {
         try {
             const agreementOnChainDetail = await getAgreement(onChainId);
@@ -325,11 +331,8 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     const handleDetailModal = () => {
         getAgreementDetail();
     }
-    useEffect(() => {
-        setActions(getAvailableActions(agreementDetail));
-    }, [agreementDetail])
 
-
+    const actions = useMemo(() => getAvailableActions(agreementDetail), [agreementDetail]);
 
 
     return (
@@ -386,6 +389,14 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                         <div>
                             <Label>Confirmation Status</Label>
                             <p className="mt-1">
+                                {agreementDetail.currentState === "Funded" ?
+                                    !agreementDetail.payeeConfirmed ? "Awaiting Payee’s Delivery"
+                                        : !agreementDetail.payerConfirmed ? "Awaiting Payer Approval"
+                                            : "Waiting for Payee to Claim Funds"
+                                    : agreementDetail.currentState === "InDispute" ? "Dispute Raised!"
+                                        : ""}
+
+                                {/* 
                                 {!agreementDetail.payeeConfirmed ?
                                     <div className="flex items-center gap-2 mt-1">
                                         <AlertTriangle className="w-4 h-4" />
@@ -401,11 +412,16 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
                                             <AlertTriangle className="w-4 h-4" />
                                             {agreementDetail.currentState === "InDispute" ?
                                                 "Dispute has raised" : "Payer Pending Confirmation"}
-                                        </div>}
+                                        </div>} */}
                             </p>
                         </div>
                     }
-                    <div className="flex gap-2 pt-4 items-end">
+                    {agreementDetail.currentState === "Completed" && agreementDetail.disputeWinner &&
+                        <div>
+                            <Label>Dispute Detail</Label>
+                            <p className="mt-1">{`This agreement had a dispute, resolved in favor of ${agreementDetail.disputeWinner}`}.</p>
+                        </div>}
+                    <div className="flex gap-2 items-end">
                         {actions.includes("confirm") && (
                             <Button onClick={handleConfirmByPayer}>Confirm Completion</Button>
                         )}
