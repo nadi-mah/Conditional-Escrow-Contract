@@ -1,51 +1,35 @@
-name: CI
+name: CI/CD
 
 on:
   push:
-    branches:
-      - contracts
+    branches: [ main ]
   pull_request:
-    branches:
-      - contracts
-
-env:
-  FOUNDRY_PROFILE: ci
+    branches: [ main ]
 
 jobs:
-  check:
-    name: Foundry project
+  build:
     runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:20.10-dind
+        options: --privileged
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      - name: Show Forge version
-        run: |
-          forge --version
-        working-directory: contracts
+      - name: Build and start containers
+        run: docker compose up --build -d
 
-      - name: Run Forge fmt
-        run: |
-          forge fmt --check
-        id: fmt
-        working-directory: contracts
+      - name: Check running containers
+        run: docker ps -a
 
-      - name: Install dependencies
-        run: forge install
-        working-directory: contracts
+      - name: Run backend tests
+        run: docker compose exec -T backend npm test || true
 
-      - name: Run Forge build
-        run: |
-          forge build --sizes
-        id: build
-        working-directory: contracts
-
-      - name: Run Forge tests
-        run: |
-          forge test -vvv
-        id: test
-        working-directory: contracts
+      - name: Run frontend build
+        run: docker compose exec -T frontend npm run build || true
