@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   anvil:
     image: ghcr.io/foundry-rs/foundry:latest
@@ -14,12 +12,22 @@ services:
     working_dir: /contracts
     volumes:
       - ./contracts:/contracts
+      - out_data:/contracts/out
     command: >
       forge create src/Escrow.sol:Escrow --rpc-url http://anvil:8545 --private-key ${DEPLOYER_PRIVATE_KEY} --broadcast --constructor-args ${OWNER_ADDRESS}
     environment:
       - DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY}
       - OWNER_ADDRESS=${OWNER_ADDRESS}
-
+  copy-artifacts:
+    image: alpine
+    depends_on:
+      - contracts-deployer
+    volumes:
+      - ./frontend/src/contracts:/contracts_dst
+      - ./out:/contracts_src
+    command: >
+      sh -c "rm -rf /contracts_dst/* &&
+             cp /contracts_src/Escrow.sol/Escrow.json /contracts_dst/"
   backend:
     build: ./backend
     working_dir: /backend
@@ -33,11 +41,11 @@ services:
 
   frontend:
     build: ./frontend
-    working_dir: /frontend
     depends_on:
       - backend
+      - copy-artifacts
     ports:
-      - "5173:5173"
-    env_file:
-      - .env
-    command: npm run dev
+      - "5173:80"
+
+volumes:
+  out_data:

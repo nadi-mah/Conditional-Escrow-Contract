@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { Interface, JsonRpcProvider, Wallet, Contract, getAddress, parseUnits } from "ethers";
-import EscrowAbi from "../../../out/Escrow.sol/Escrow.json";
+import EscrowAbi from "../contracts/Escrow.json";
 
 const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
