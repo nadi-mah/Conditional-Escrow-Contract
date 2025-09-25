@@ -12,7 +12,6 @@ services:
     working_dir: /contracts
     volumes:
       - ./contracts:/contracts
-      - out_data:/contracts/out
     command: >
       forge create src/Escrow.sol:Escrow --rpc-url http://anvil:8545 --private-key ${DEPLOYER_PRIVATE_KEY} --broadcast --constructor-args ${OWNER_ADDRESS}
     environment:
@@ -28,11 +27,24 @@ services:
     command: >
       sh -c "rm -rf /contracts_dst/* &&
              cp /contracts_src/Escrow.sol/Escrow.json /contracts_dst/"
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
   backend:
     build: ./backend
     working_dir: /backend
     depends_on:
-      - contracts-deployer
+      - db
     ports:
       - "3000:3000"
     env_file:
@@ -48,4 +60,4 @@ services:
       - "5173:80"
 
 volumes:
-  out_data:
+  db_data:

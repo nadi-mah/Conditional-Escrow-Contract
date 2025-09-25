@@ -24,7 +24,7 @@ export async function getEscrowContractFromMetaMask() {
  * Returns an Escrow contract instance for a specific role (payer, payee, arbiter) using anvil.
  */
 export function getEscrowContract(role) {
-    const provider = new JsonRpcProvider("http://127.0.0.1:8545");
+    const provider = new JsonRpcProvider("http://anvil:8545");
     const privateKey = keys[role];
     if (!privateKey) throw new Error("Invalid role");
     const wallet = new Wallet(privateKey, provider);
@@ -165,7 +165,7 @@ export async function resolveDispute(id, winner) {
  * Gets the balances of payer and payee (for debugging purposes).
  */
 async function getPartiesBalance() {
-    const provider = new JsonRpcProvider("http://127.0.0.1:8545");
+    const provider = new JsonRpcProvider("http://anvil:8545");
     const payerAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
     const payeeAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
 
