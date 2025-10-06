@@ -9,6 +9,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+      OWNER_ADDRESS: ${{ secrets.OWNER_ADDRESS }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      VITE_PAYER_ADDRESS: ${{ secrets.VITE_PAYER_ADDRESS }}
+      VITE_PAYEE_ADDRESS: ${{ secrets.VITE_PAYEE_ADDRESS }}
+      VITE_ARBITER_ADDRESS: ${{ secrets.VITE_ARBITER_ADDRESS }}
 
     services:
       docker:
