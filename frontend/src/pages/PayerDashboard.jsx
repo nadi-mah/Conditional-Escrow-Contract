@@ -70,7 +70,7 @@ function CreateAgreementModal({ handleDialogClose }) {
             handlePostAgreement(form);
 
         } catch (error) {
-            // console.error(error);
+            console.error(error);
         }
     }
     const handlePostAgreement = async (form) => {
