@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import './styles/globals.css';
 import './index.css';
 import { PayerDashboard } from './pages/PayerDashboard';
@@ -45,7 +45,7 @@ function AppContent() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <Routes>
-          <Route path="/" element={<PayerDashboard />} />
+          <Route path="/" element={<Navigate to="/payer" />} />
           <Route path="/payer" element={<PayerDashboard />} />
           <Route path="/payee" element={<PayeeDashboard />} />
           <Route path="/arbiter" element={<ArbiterDashboard />} />

@@ -40,6 +40,7 @@ function getStatusColor(status) {
 }
 
 function AgreementDetailsModal({ agreementId, handleDialogClose }) {
+    console.log("in Payee detail modal", agreementId);
 
     const [agreementDetail, setAgreementDetail] = useState({});
 
@@ -49,7 +50,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
         try {
             const { data } = await AgreementService.getAgreementDetail({ agreementId });
             setAgreementDetail(data.agreement);
-            console.log(data.agreement);
+            // console.log(data.agreement);
             await handleGetAgreementFromContract(data.agreement.onChainId);
         } catch (err) {
             console.error(err);
@@ -113,10 +114,12 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     }
     const getAvailableActions = () => {
         const actions = []
-        const now = new Date().toLocaleString()
-        const deadline = new Date(agreementDetail.deadline).toLocaleString();
+        const now = new Date();
+        const deadline = new Date(agreementDetail.deadline);
         const isBeforeDeadline = now < deadline;
         const isAfterDeadline = now > deadline;
+        console.log("isBeforeDeadline", isBeforeDeadline);
+        console.log("isAfterDeadline", isAfterDeadline);
 
         // 1) Confirm Completion
         if (
@@ -149,8 +152,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     const handleDetailModal = () => {
         getAgreementDetail();
     }
-
-    const actions = useMemo(() => getAvailableActions(agreementDetail), [agreementDetail]);
+    const actions = getAvailableActions();
 
 
     return (
@@ -246,7 +248,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
 }
 
 export function PayeeDashboard() {
-
+    console.log("in Payee dashboard");
     const [agreements, setAgreements] = useState([]);
     const payeeAddress = import.meta.env.VITE_PAYEE_ADDRESS;
 

@@ -284,8 +284,8 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
     }
     const getAvailableActions = () => {
         const actions = []
-        const now = new Date().toLocaleString()
-        const deadline = new Date(agreementDetail.deadline).toLocaleString();
+        const now = new Date();
+        const deadline = new Date(agreementDetail.deadline);
         const isBeforeDeadline = now < deadline;
         const isAfterDeadline = now > deadline;
 
@@ -332,7 +332,7 @@ function AgreementDetailsModal({ agreementId, handleDialogClose }) {
         getAgreementDetail();
     }
 
-    const actions = useMemo(() => getAvailableActions(agreementDetail), [agreementDetail]);
+    const actions = getAvailableActions(agreementDetail);
 
 
     return (
